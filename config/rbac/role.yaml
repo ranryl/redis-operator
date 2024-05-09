@@ -1,0 +1,110 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: manager-role
+rules:
+- apiGroups:
+  - cache.ranryl.io.ranryl.com
+  resources:
+  - redis
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - cache.ranryl.io.ranryl.com
+  resources:
+  - redis/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - cache.ranryl.io.ranryl.com
+  resources:
+  - redis/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - cache.ranryl.io.ranryl.com
+  resources:
+  - redisclusters
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - cache.ranryl.io.ranryl.com
+  resources:
+  - redisclusters/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - cache.ranryl.io.ranryl.com
+  resources:
+  - redisclusters/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - cache.ranryl.io.ranryl.com
+  resources:
+  - redisreplications
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - cache.ranryl.io.ranryl.com
+  resources:
+  - redisreplications/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - cache.ranryl.io.ranryl.com
+  resources:
+  - redisreplications/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - cache.ranryl.io.ranryl.com
+  resources:
+  - redissentinels
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - cache.ranryl.io.ranryl.com
+  resources:
+  - redissentinels/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - cache.ranryl.io.ranryl.com
+  resources:
+  - redissentinels/status
+  verbs:
+  - get
+  - patch
+  - update

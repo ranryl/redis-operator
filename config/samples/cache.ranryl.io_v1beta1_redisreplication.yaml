@@ -1,0 +1,9 @@
+apiVersion: cache.ranryl.io.ranryl.com/v1beta1
+kind: RedisReplication
+metadata:
+  labels:
+    app.kubernetes.io/name: redis-operator
+    app.kubernetes.io/managed-by: kustomize
+  name: redisreplication-sample
+spec:
+  # TODO(user): Add fields here
