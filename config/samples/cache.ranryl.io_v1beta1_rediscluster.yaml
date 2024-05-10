@@ -6,4 +6,63 @@ metadata:
     app.kubernetes.io/managed-by: kustomize
   name: rediscluster-sample
 spec:
-  # TODO(user): Add fields here
+  image: "redis:7.2.4"
+  replicas: 1
+  shard: 3
+  port: 6379
+  nodeSelector:
+    kubernetes.io/hostname: lima-k3s
+  priorityClassName: system-node-critical
+  livenessProbe:
+    tcpSocket:
+        port: 6379
+    initialDelaySeconds: 2
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 3
+    successThreshold: 1
+  readinessProbe:
+    tcpSocket:
+        port: 6379
+    initialDelaySeconds: 2
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 3
+    successThreshold: 1
+  volumeMounts:
+  # - mountPath: /data
+  #   name: data
+  #   readOnly: false
+  - mountPath: /usr/local/etc/redis/redis.conf
+    name: redis-conf
+    subPath: redis.conf
+  volumes:
+  - configMap:
+      name: redis-conf
+    name: redis-conf
+  # volumeClaimTemplates:
+  # - metadata:
+  #     namespace: default
+  #     name: data
+  #   apiVersion: v1
+  #   kind: PersistentVolumeClaim
+  #   spec:
+  #     accessModes:
+  #     - ReadWriteOnce
+  #     resources:
+  #       requests:
+  #         storage: 1G
+  #     storageClassName: local-path
+  args: 
+    - /usr/local/etc/redis/redis.conf
+  redisConfig: |
+    bind * -::*
+    protected-mode no
+    port 6379
+    tcp-backlog 511
+    timeout 0
+    tcp-keepalive 300
+    daemonize no
+    pidfile /var/run/redis_6379.pid
+    cluster-enabled yes
+

@@ -36,6 +36,7 @@ import (
 
 	cacheranryliov1beta1 "github.com/ranryl/redis-operator/api/v1beta1"
 	"github.com/ranryl/redis-operator/internal/controller"
+	"github.com/ranryl/redis-operator/internal/redisclient"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -121,7 +122,10 @@ func main() {
 		setupLog.Error(err, "unable to start manager")
 		os.Exit(1)
 	}
-
+	client, err := redisclient.NewRedisClient()
+	if err != nil {
+		panic(err)
+	}
 	if err = (&controller.RedisReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
@@ -144,8 +148,9 @@ func main() {
 		os.Exit(1)
 	}
 	if err = (&controller.RedisClusterReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
+		Client:      mgr.GetClient(),
+		Scheme:      mgr.GetScheme(),
+		RedisClient: client,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "RedisCluster")
 		os.Exit(1)

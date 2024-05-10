@@ -6,4 +6,52 @@ metadata:
     app.kubernetes.io/managed-by: kustomize
   name: redissentinel-sample
 spec:
-  # TODO(user): Add fields here
+  image: "redis:7.2.4"
+  masterReplica: 1
+  slaveReplica: 2
+  sentinelReplica: 3
+  port: 6379
+  configPath: "/usr/local/etc/redis/redis.conf"
+  sentinelConfigPath: "/data/redis-sentinel.conf"
+  # volumeMounts:
+  # - mountPath: /data
+  #   name: data
+  #   readOnly: false
+
+  # volumeClaimTemplates:
+  # - metadata:
+  #     namespace: default
+  #     name: data
+  #   apiVersion: v1
+  #   kind: PersistentVolumeClaim
+  #   spec:
+  #     accessModes:
+  #     - ReadWriteOnce
+  #     resources:
+  #       requests:
+  #         storage: 1G
+  #     storageClassName: local-path
+  slaveConfig: |
+    bind * -::*
+    protected-mode no
+    port 6379
+    tcp-backlog 511
+    timeout 0
+    tcp-keepalive 300
+    daemonize no
+    pidfile /var/run/redis_6379.pid
+    #replicaof 127.0.0.1 6379
+  sentinelConfig: |
+    port 26379
+    daemonize no
+    pidfile /var/run/redis-sentinel.pid
+    logfile ""
+    dir /tmp
+    #sentinel monitor mymaster 127.0.0.1 6379 2
+    sentinel down-after-milliseconds mymaster 30000
+    acllog-max-len 128
+    sentinel parallel-syncs mymaster 1
+    sentinel failover-timeout mymaster 180000
+    sentinel deny-scripts-reconfig yes
+    SENTINEL resolve-hostnames yes
+    SENTINEL announce-hostnames yes

@@ -17,6 +17,7 @@ limitations under the License.
 package v1beta1
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -25,18 +26,45 @@ import (
 
 // RedisClusterSpec defines the desired state of RedisCluster
 type RedisClusterSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
-
-	// Foo is an example field of RedisCluster. Edit rediscluster_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	Image                string                         `json:"image"`
+	Replicas             int32                          `json:"replicas,omitempty"`
+	Shard                int32                          `json:"shard"`
+	Port                 int32                          `json:"port,omitempty"`
+	RedisConfig          string                         `json:"redisConfig,omitempty"`
+	HostNetwork          bool                           `json:"hostNetwork,omitempty"`
+	Resources            corev1.ResourceRequirements    `json:"resources,omitempty"`
+	EnvVars              []corev1.EnvVar                `json:"env,omitempty"`
+	Args                 []string                       `json:"args,omitempty"`
+	NodeSelector         map[string]string              `json:"nodeSelector,omitempty"`
+	Affinity             *corev1.Affinity               `json:"affinity,omitempty"`
+	Tolerations          []corev1.Toleration            `json:"toleration,omitempty"`
+	PriorityClassName    string                         `json:"priorityClassName,omitempty"`
+	LivenessProbe        *corev1.Probe                  `json:"livenessProbe,omitempty"`
+	ReadinessProbe       *corev1.Probe                  `json:"readinessProbe,omitempty"`
+	StartupProbe         *corev1.Probe                  `json:"startupProbe,omitempty"`
+	Volumes              []corev1.Volume                `json:"volumes,omitempty"`
+	VolumeMounts         []corev1.VolumeMount           `json:"volumeMounts,omitempty"`
+	VolumeClaimTemplates []corev1.PersistentVolumeClaim `json:"volumeClaimTemplates,omitempty"`
 }
+
+type RedisClusterState string
 
 // RedisClusterStatus defines the observed state of RedisCluster
 type RedisClusterStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	State     RedisClusterState `json:"state,omitempty"`
+	Reason    string            `json:"reason,omitempty"`
+	Replicas  int32             `json:"replicas,omitempty"`
+	Shard     int32             `json:"shard,omitempty"`
+	InitShard int32             `json:"initShard,omitempty"`
 }
+
+const (
+	RedisClusterInitializing RedisClusterState = "Initializing"
+	RedisClusterBootstrap    RedisClusterState = "Bootstrap"
+	// RedisClusterReady means the RedisCluster is ready for use, we use redis-cli --cluster check 127.0.0.1:6379 to check the cluster status
+	RedisClusterReady RedisClusterState = "Ready"
+	// RedisClusterFailed       RedisClusterState = "Failed"
+)
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status

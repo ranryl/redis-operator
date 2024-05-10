@@ -6,4 +6,18 @@ metadata:
     app.kubernetes.io/managed-by: kustomize
   name: redisreplication-sample
 spec:
-  # TODO(user): Add fields here
+  image: "redis:7.2.4"
+  masterReplica: 1
+  slaveReplica: 2
+  port: 6379
+  configPath: "/usr/local/etc/redis/redis.conf"
+  slaveConfig: |
+    bind * -::*
+    protected-mode no
+    port 6379
+    tcp-backlog 511
+    timeout 0
+    tcp-keepalive 300
+    daemonize no
+    pidfile /var/run/redis_6379.pid
+    #replicaof 127.0.0.1 6379

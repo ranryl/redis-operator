@@ -17,6 +17,7 @@ limitations under the License.
 package v1beta1
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -25,11 +26,28 @@ import (
 
 // RedisSentinelSpec defines the desired state of RedisSentinel
 type RedisSentinelSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
-
-	// Foo is an example field of RedisSentinel. Edit redissentinel_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	Image                string                         `json:"image"`
+	MasterReplica        int32                          `json:"masterReplica"`
+	SlaveReplica         int32                          `json:"slaveReplica"`
+	SentinelReplica      int32                          `json:"sentinelReplica,omitempty"`
+	Port                 int32                          `json:"port,omitempty"`
+	RedisConfig          string                         `json:"redisConfig,omitempty"`
+	SlaveConfig          string                         `json:"slaveConfig,omitempty"`
+	SentinelConfig       string                         `json:"sentinelConfig,omitempty"`
+	ConfigPath           string                         `json:"configPath,omitempty"`
+	SentinelConfigPath   string                         `json:"sentinelConfigPath,omitempty"`
+	HostNetwork          bool                           `json:"hostNetwork,omitempty"`
+	Resources            corev1.ResourceRequirements    `json:"resources,omitempty"`
+	NodeSelector         map[string]string              `json:"nodeSelector,omitempty"`
+	Affinity             *corev1.Affinity               `json:"affinity,omitempty"`
+	Tolerations          []corev1.Toleration            `json:"toleration,omitempty"`
+	PriorityClassName    string                         `json:"priorityClassName,omitempty"`
+	LivenessProbe        *corev1.Probe                  `json:"livenessProbe,omitempty"`
+	ReadinessProbe       *corev1.Probe                  `json:"readinessProbe,omitempty"`
+	StartupProbe         *corev1.Probe                  `json:"startupProbe,omitempty"`
+	Volumes              []corev1.Volume                `json:"volumes,omitempty"`
+	VolumeMounts         []corev1.VolumeMount           `json:"volumeMounts,omitempty"`
+	VolumeClaimTemplates []corev1.PersistentVolumeClaim `json:"volumeClaimTemplates,omitempty"`
 }
 
 // RedisSentinelStatus defines the observed state of RedisSentinel
