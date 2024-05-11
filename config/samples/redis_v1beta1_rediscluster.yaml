@@ -34,12 +34,12 @@ spec:
   #   name: data
   #   readOnly: false
   - mountPath: /usr/local/etc/redis/redis.conf
-    name: redis-conf
+    name: rediscluster-sample
     subPath: redis.conf
   volumes:
   - configMap:
-      name: redis-conf
-    name: redis-conf
+      name: rediscluster-sample
+    name: rediscluster-sample
   # volumeClaimTemplates:
   # - metadata:
   #     namespace: default

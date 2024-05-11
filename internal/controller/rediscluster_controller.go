@@ -46,11 +46,16 @@ type RedisClusterReconciler struct {
 const (
 	MinClusterShards = 3
 	RetryTimes       = 3
+	LastApplied      = "kubectl.kubernetes.io/last-applied-configuration"
 )
 
 //+kubebuilder:rbac:groups=redis.ranryl.io,resources=redisclusters,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=redis.ranryl.io,resources=redisclusters/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=redis.ranryl.io,resources=redisclusters/finalizers,verbs=update
+//+kubebuilder:rbac:groups=apps,resources=statefulsets,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups="",resources=configmaps,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups="",resources=services,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups="",resources=pods/exec,verbs=create;update
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -76,41 +81,41 @@ func (r *RedisClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		return ctrl.Result{RequeueAfter: time.Second * 10}, nil
 	}
 
+	// create cm
+	oldcm := &corev1.ConfigMap{}
+	cm := r.NewRedisConfig(instance)
+	if err := r.Get(ctx, req.NamespacedName, oldcm); err != nil {
+		if errors.IsNotFound(err) {
+			if err := r.Create(ctx, cm); err != nil {
+				if !errors.IsAlreadyExists(err) {
+					return ctrl.Result{}, err
+				}
+			}
+		} else {
+			log.Log.Error(err, "get configmap err:")
+			return ctrl.Result{RequeueAfter: 10 * time.Second}, err
+		}
+	} else {
+		if err := r.Update(ctx, cm); err != nil {
+			log.Log.Error(err, "update configmap err:")
+			return ctrl.Result{RequeueAfter: 10 * time.Second}, err
+		}
+	}
 	stsInstance := &appsv1.StatefulSet{}
 	if err := r.Get(ctx, req.NamespacedName, stsInstance); err != nil {
 		if !errors.IsNotFound(err) {
 			return ctrl.Result{}, err
 		}
-		// create cm
-		cm := r.NewRedisConfig(instance)
-		if err := r.Create(ctx, cm); err != nil {
-			if !errors.IsAlreadyExists(err) {
-				return ctrl.Result{}, err
-			}
-		}
-
 		// create sts
 		stsInstance = r.NewRedisSts(instance, req.Namespace)
 		if err := r.Create(ctx, stsInstance); err != nil {
 			logger.Info(err.Error())
 			return ctrl.Result{}, err
 		}
-		redisSvc := r.NewRedisService(instance)
-		if err := r.Create(ctx, redisSvc); err != nil {
-			if !errors.IsAlreadyExists(err) {
-				logger.Info(err.Error())
-				return ctrl.Result{}, err
-			}
-		}
 		return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
 	} else {
-		cm := r.NewRedisConfig(instance)
-		if err := r.Update(ctx, cm); err != nil {
-			return ctrl.Result{}, err
-		}
 		oldSpec := &redisv1beta1.RedisCluster{}
-		lastApplied := "kubectl.kubernetes.io/last-applied-configuration"
-		if err := json.Unmarshal([]byte(instance.Annotations[lastApplied]), oldSpec); err != nil {
+		if err := json.Unmarshal([]byte(instance.Annotations[LastApplied]), oldSpec); err != nil {
 			logger.Info(err.Error())
 			return ctrl.Result{}, err
 		}
@@ -142,17 +147,25 @@ func (r *RedisClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request
 				return ctrl.Result{}, err
 			}
 		}
-		newService := r.NewRedisService(instance)
-		currService := &corev1.Service{}
-		if err := r.Client.Get(ctx, req.NamespacedName, currService); err != nil {
-			logger.Info(err.Error())
-			return ctrl.Result{}, err
+	}
+	oldSvc := &corev1.Service{}
+	newSvc := r.NewRedisService(instance)
+	if err := r.Get(ctx, req.NamespacedName, oldSvc); err != nil {
+		if errors.IsNotFound(err) {
+			if err = r.Create(ctx, newSvc); err != nil {
+				log.Log.Error(err, "create redis svc err")
+				return ctrl.Result{}, err
+			}
+		} else {
+			log.Log.Error(err, "get redis svc err")
+			return ctrl.Result{RequeueAfter: 10 * time.Second}, err
 		}
-		currIP := currService.Spec.ClusterIP
-		currService.Spec = newService.Spec
-		currService.Spec.ClusterIP = currIP
-		if err = r.Client.Update(ctx, currService); err != nil {
-			logger.Info(err.Error())
+	} else {
+		currIP := oldSvc.Spec.ClusterIP
+		oldSvc.Spec = newSvc.Spec
+		oldSvc.Spec.ClusterIP = currIP
+		if err = r.Client.Update(ctx, oldSvc); err != nil {
+			log.Log.Error(err, "update svc err")
 			return ctrl.Result{}, err
 		}
 	}
@@ -325,8 +338,8 @@ func (r *RedisClusterReconciler) ScalerDown(knownNodes, total int, namespace str
 			i--
 		}
 		if masterIP != "" {
-			// slot, err := r.RedisClient.GetClusterSlots(connIP, port, masterID)
-			slots, err := r.RedisClient.GetClusterSlots("127.0.0.1", "26379", masterID)
+			slots, err := r.RedisClient.GetClusterSlots(connIP, port, masterID)
+			// slots, err := r.RedisClient.GetClusterSlots("127.0.0.1", "26379", masterID)
 			if err != nil {
 				log.Log.Error(err, "get cluster slots error:")
 			}
