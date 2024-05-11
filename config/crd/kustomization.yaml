@@ -2,15 +2,19 @@
 # since it depends on service name and namespace that are out of this kustomize package.
 # It should be run by config/default
 resources:
-- bases/cache.ranryl.io.ranryl.com_redis.yaml
-- bases/cache.ranryl.io.ranryl.com_redisreplications.yaml
-- bases/cache.ranryl.io.ranryl.com_redissentinels.yaml
-- bases/cache.ranryl.io.ranryl.com_redisclusters.yaml
+- bases/redis.ranryl.io_redis.yaml
+- bases/redis.ranryl.io_redisreplications.yaml
+- bases/redis.ranryl.io_redissentinels.yaml
+- bases/redis.ranryl.io_redisclusters.yaml
 #+kubebuilder:scaffold:crdkustomizeresource
 
 patches:
 # [WEBHOOK] To enable webhook, uncomment all the sections with [WEBHOOK] prefix.
 # patches here are for enabling the conversion webhook for each CRD
+#- path: patches/webhook_in_redis.yaml
+#- path: patches/webhook_in_redisreplications.yaml
+#- path: patches/webhook_in_redissentinels.yaml
+#- path: patches/webhook_in_redisclusters.yaml
 #+kubebuilder:scaffold:crdkustomizewebhookpatch
 
 # [CERTMANAGER] To enable cert-manager, uncomment all the sections with [CERTMANAGER] prefix.

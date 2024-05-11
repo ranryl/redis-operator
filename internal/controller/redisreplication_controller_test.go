@@ -27,7 +27,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	cacheranryliov1beta1 "github.com/ranryl/redis-operator/api/v1beta1"
+	redisv1beta1 "github.com/ranryl/redis-operator/api/v1beta1"
 )
 
 var _ = Describe("RedisReplication Controller", func() {
@@ -40,13 +40,13 @@ var _ = Describe("RedisReplication Controller", func() {
 			Name:      resourceName,
 			Namespace: "default", // TODO(user):Modify as needed
 		}
-		redisreplication := &cacheranryliov1beta1.RedisReplication{}
+		redisreplication := &redisv1beta1.RedisReplication{}
 
 		BeforeEach(func() {
 			By("creating the custom resource for the Kind RedisReplication")
 			err := k8sClient.Get(ctx, typeNamespacedName, redisreplication)
 			if err != nil && errors.IsNotFound(err) {
-				resource := &cacheranryliov1beta1.RedisReplication{
+				resource := &redisv1beta1.RedisReplication{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      resourceName,
 						Namespace: "default",
@@ -59,7 +59,7 @@ var _ = Describe("RedisReplication Controller", func() {
 
 		AfterEach(func() {
 			// TODO(user): Cleanup logic after each test, like removing the resource instance.
-			resource := &cacheranryliov1beta1.RedisReplication{}
+			resource := &redisv1beta1.RedisReplication{}
 			err := k8sClient.Get(ctx, typeNamespacedName, resource)
 			Expect(err).NotTo(HaveOccurred())
 

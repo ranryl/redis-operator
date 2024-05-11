@@ -33,7 +33,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
-	cacheranryliov1beta1 "github.com/ranryl/redis-operator/api/v1beta1"
+	redisv1beta1 "github.com/ranryl/redis-operator/api/v1beta1"
 )
 
 // RedisSentinelReconciler reconciles a RedisSentinel object
@@ -42,9 +42,9 @@ type RedisSentinelReconciler struct {
 	Scheme *runtime.Scheme
 }
 
-//+kubebuilder:rbac:groups=cache.ranryl.io.ranryl.com,resources=redissentinels,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=cache.ranryl.io.ranryl.com,resources=redissentinels/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=cache.ranryl.io.ranryl.com,resources=redissentinels/finalizers,verbs=update
+//+kubebuilder:rbac:groups=redis.ranryl.io,resources=redissentinels,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=redis.ranryl.io,resources=redissentinels/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=redis.ranryl.io,resources=redissentinels/finalizers,verbs=update
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -54,10 +54,10 @@ type RedisSentinelReconciler struct {
 // the user.
 //
 // For more details, check Reconcile and its Result here:
-// - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.17.3/pkg/reconcile
+// - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.17.2/pkg/reconcile
 func (r *RedisSentinelReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	_ = log.FromContext(ctx)
-	instance := &cacheranryliov1beta1.RedisSentinel{}
+	instance := &redisv1beta1.RedisSentinel{}
 	if err := r.Get(ctx, req.NamespacedName, instance); err != nil {
 		if !errors.IsNotFound(err) {
 			return ctrl.Result{}, nil
@@ -226,7 +226,7 @@ func (r *RedisSentinelReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	}
 	return ctrl.Result{}, nil
 }
-func (r *RedisSentinelReconciler) NewMaster(name string, app *cacheranryliov1beta1.RedisSentinel) *appsv1.StatefulSet {
+func (r *RedisSentinelReconciler) NewMaster(name string, app *redisv1beta1.RedisSentinel) *appsv1.StatefulSet {
 	sts := r.NewStatefulSet("master", app)
 	sts.Spec.Replicas = &app.Spec.MasterReplica
 	sts.ObjectMeta.Name = name
@@ -251,7 +251,7 @@ func (r *RedisSentinelReconciler) NewMaster(name string, app *cacheranryliov1bet
 	}
 	return sts
 }
-func (r *RedisSentinelReconciler) NewMasterConfig(name string, app *cacheranryliov1beta1.RedisSentinel) *corev1.ConfigMap {
+func (r *RedisSentinelReconciler) NewMasterConfig(name string, app *redisv1beta1.RedisSentinel) *corev1.ConfigMap {
 	if app.Spec.RedisConfig == "" {
 		return nil
 	}
@@ -271,7 +271,7 @@ func (r *RedisSentinelReconciler) NewMasterConfig(name string, app *cacheranryli
 		Data: data,
 	}
 }
-func (r *RedisSentinelReconciler) NewMasterService(name string, app *cacheranryliov1beta1.RedisSentinel) *corev1.Service {
+func (r *RedisSentinelReconciler) NewMasterService(name string, app *redisv1beta1.RedisSentinel) *corev1.Service {
 	labels := app.Labels
 	labels["app"] = "master"
 	return &corev1.Service{
@@ -298,7 +298,7 @@ func (r *RedisSentinelReconciler) NewMasterService(name string, app *cacheranryl
 		},
 	}
 }
-func (r *RedisSentinelReconciler) NewSlave(name string, app *cacheranryliov1beta1.RedisSentinel) *appsv1.StatefulSet {
+func (r *RedisSentinelReconciler) NewSlave(name string, app *redisv1beta1.RedisSentinel) *appsv1.StatefulSet {
 	sts := r.NewStatefulSet("slave", app)
 	sts.Spec.Replicas = &app.Spec.SlaveReplica
 	sts.ObjectMeta.Name = name
@@ -321,7 +321,7 @@ func (r *RedisSentinelReconciler) NewSlave(name string, app *cacheranryliov1beta
 	sts.Spec.Template.Spec.Containers[0].Args = append(sts.Spec.Template.Spec.Containers[0].Args, app.Spec.ConfigPath)
 	return sts
 }
-func (r *RedisSentinelReconciler) NewSlaveConfig(name string, app *cacheranryliov1beta1.RedisSentinel, masterPodName string) *corev1.ConfigMap {
+func (r *RedisSentinelReconciler) NewSlaveConfig(name string, app *redisv1beta1.RedisSentinel, masterPodName string) *corev1.ConfigMap {
 	if app.Spec.SlaveConfig == "" {
 		return nil
 	}
@@ -342,7 +342,7 @@ func (r *RedisSentinelReconciler) NewSlaveConfig(name string, app *cacheranrylio
 		Data: data,
 	}
 }
-func (r *RedisSentinelReconciler) NewSentinel(name string, app *cacheranryliov1beta1.RedisSentinel) *appsv1.Deployment {
+func (r *RedisSentinelReconciler) NewSentinel(name string, app *redisv1beta1.RedisSentinel) *appsv1.Deployment {
 	deploy := appsv1.Deployment{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "apps/v1",
@@ -438,7 +438,7 @@ func (r *RedisSentinelReconciler) NewSentinel(name string, app *cacheranryliov1b
 	deploy.Spec.Template.Labels["app"] = "sentinel"
 	return &deploy
 }
-func (r *RedisSentinelReconciler) NewSentinelConfig(name string, app *cacheranryliov1beta1.RedisSentinel, masterPodName string) *corev1.ConfigMap {
+func (r *RedisSentinelReconciler) NewSentinelConfig(name string, app *redisv1beta1.RedisSentinel, masterPodName string) *corev1.ConfigMap {
 	if app.Spec.SentinelConfig == "" {
 		return nil
 	}
@@ -459,7 +459,7 @@ func (r *RedisSentinelReconciler) NewSentinelConfig(name string, app *cacheranry
 		Data: data,
 	}
 }
-func (r *RedisSentinelReconciler) NewSentinelService(name string, app *cacheranryliov1beta1.RedisSentinel) *corev1.Service {
+func (r *RedisSentinelReconciler) NewSentinelService(name string, app *redisv1beta1.RedisSentinel) *corev1.Service {
 	labels := app.Labels
 	labels["app"] = "sentinel"
 	return &corev1.Service{
@@ -486,7 +486,7 @@ func (r *RedisSentinelReconciler) NewSentinelService(name string, app *cacheranr
 	}
 }
 
-func (r *RedisSentinelReconciler) NewStatefulSet(appName string, app *cacheranryliov1beta1.RedisSentinel) *appsv1.StatefulSet {
+func (r *RedisSentinelReconciler) NewStatefulSet(appName string, app *redisv1beta1.RedisSentinel) *appsv1.StatefulSet {
 	labels := app.Labels
 	labels["app"] = appName
 	selector := &metav1.LabelSelector{MatchLabels: labels}
@@ -502,8 +502,8 @@ func (r *RedisSentinelReconciler) NewStatefulSet(appName string, app *cacheranry
 			Labels:      app.Labels,
 			OwnerReferences: []metav1.OwnerReference{
 				*metav1.NewControllerRef(app, schema.GroupVersionKind{
-					Group:   cacheranryliov1beta1.GroupVersion.Group,
-					Version: cacheranryliov1beta1.GroupVersion.Version,
+					Group:   redisv1beta1.GroupVersion.Group,
+					Version: redisv1beta1.GroupVersion.Version,
 					Kind:    app.Kind,
 				}),
 			},
@@ -550,6 +550,6 @@ func (r *RedisSentinelReconciler) NewStatefulSet(appName string, app *cacheranry
 // SetupWithManager sets up the controller with the Manager.
 func (r *RedisSentinelReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&cacheranryliov1beta1.RedisSentinel{}).
+		For(&redisv1beta1.RedisSentinel{}).
 		Complete(r)
 }

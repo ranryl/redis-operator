@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"strings"
 
-	cacheranryliov1beta1 "github.com/ranryl/redis-operator/api/v1beta1"
+	redisv1beta1 "github.com/ranryl/redis-operator/api/v1beta1"
 	"github.com/redis/go-redis/v9"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
@@ -95,7 +95,7 @@ func (r *RedisClient) GetClusterSize(ip, port, password, namespace string) (int,
 	}
 	return clusterSize, clusterCount, nil
 }
-func (r *RedisClient) CreateCluster(ips []string, port, password string, rc *cacheranryliov1beta1.RedisCluster) (string, error) {
+func (r *RedisClient) CreateCluster(ips []string, port, password string, rc *redisv1beta1.RedisCluster) (string, error) {
 	cmd := []string{"redis-cli", "--cluster", "create"}
 	if len(ips) <= 0 {
 		return "", errors.New("cluster ips lens must great than 0")
@@ -110,7 +110,7 @@ func (r *RedisClient) CreateCluster(ips []string, port, password string, rc *cac
 	// cmd = append(cmd, password)
 	return r.ExecuteCmd(cmd, rc.Namespace, ips[0])
 }
-func (r *RedisClient) AddMaster(ip, connIP, port, password string, rc *cacheranryliov1beta1.RedisCluster) (string, error) {
+func (r *RedisClient) AddMaster(ip, connIP, port, password string, rc *redisv1beta1.RedisCluster) (string, error) {
 	cmd := []string{"redis-cli", "--cluster", "add-node"}
 	podSufix := "." + rc.Name + "." + rc.Namespace + ".svc.cluster.local"
 	cmd = append(cmd, net.JoinHostPort(ip+podSufix, port))
@@ -119,12 +119,12 @@ func (r *RedisClient) AddMaster(ip, connIP, port, password string, rc *cacheranr
 	// cmd = append(cmd, password)
 	return r.ExecuteCmd(cmd, rc.Namespace, connIP)
 }
-func (r *RedisClient) GetNodeID(ip, port, password string, rc *cacheranryliov1beta1.RedisCluster) (string, error) {
+func (r *RedisClient) GetNodeID(ip, port, password string, rc *redisv1beta1.RedisCluster) (string, error) {
 	cmd := []string{"redis-cli", "cluster", "myid"}
 	nodeId, err := r.ExecuteCmd(cmd, rc.Namespace, ip)
 	return strings.Trim(nodeId, "\n"), err
 }
-func (r *RedisClient) Check(ip, port string, rc *cacheranryliov1beta1.RedisCluster) (string, error) {
+func (r *RedisClient) Check(ip, port string, rc *redisv1beta1.RedisCluster) (string, error) {
 	podSufix := "." + rc.Name + "." + rc.Namespace + ".svc.cluster.local"
 	cmd := []string{"redis-cli", "--cluster", "check", net.JoinHostPort(ip+podSufix, port)}
 	result, err := r.ExecuteCmd(cmd, rc.Namespace, ip)
@@ -136,13 +136,13 @@ func (r *RedisClient) Check(ip, port string, rc *cacheranryliov1beta1.RedisClust
 	}
 	return result, errors.New("redis cluster status failed")
 }
-func (r *RedisClient) Fix(ip, port, password string, rc *cacheranryliov1beta1.RedisCluster) (string, error) {
+func (r *RedisClient) Fix(ip, port, password string, rc *redisv1beta1.RedisCluster) (string, error) {
 	podSufix := "." + rc.Name + "." + rc.Namespace + ".svc.cluster.local"
 	cmd := []string{"redis-cli", "--cluster", "fix"}
 	cmd = append(cmd, net.JoinHostPort(ip+podSufix, port))
 	return r.ExecuteCmd(cmd, rc.Namespace, ip)
 }
-func (r *RedisClient) Reshard(ip, port, password, from, to, slotsNum string, rc *cacheranryliov1beta1.RedisCluster) (string, error) {
+func (r *RedisClient) Reshard(ip, port, password, from, to, slotsNum string, rc *redisv1beta1.RedisCluster) (string, error) {
 	podSufix := "." + rc.Name + "." + rc.Namespace + ".svc.cluster.local"
 	cmd := []string{"redis-cli", "--cluster", "reshard"}
 	cmd = append(cmd, net.JoinHostPort(ip+podSufix, port))
@@ -152,13 +152,13 @@ func (r *RedisClient) Reshard(ip, port, password, from, to, slotsNum string, rc 
 	cmd = append(cmd, "--cluster-yes")
 	return r.ExecuteCmd(cmd, rc.Namespace, ip)
 }
-func (r *RedisClient) Rebalance(ip, port, password string, rc *cacheranryliov1beta1.RedisCluster) (string, error) {
+func (r *RedisClient) Rebalance(ip, port, password string, rc *redisv1beta1.RedisCluster) (string, error) {
 	podSufix := "." + rc.Name + "." + rc.Namespace + ".svc.cluster.local"
 	cmd := []string{"redis-cli", "--cluster", "rebalance"}
 	cmd = append(cmd, net.JoinHostPort(ip+podSufix, port))
 	return r.ExecuteCmd(cmd, rc.Namespace, ip)
 }
-func (r *RedisClient) AddSlave(ip, anyIP, port, password, masterID string, rc *cacheranryliov1beta1.RedisCluster) (string, error) {
+func (r *RedisClient) AddSlave(ip, anyIP, port, password, masterID string, rc *redisv1beta1.RedisCluster) (string, error) {
 	podSufix := "." + rc.Name + "." + rc.Namespace + ".svc.cluster.local"
 	cmd := []string{"redis-cli", "--cluster", "add-node"}
 	cmd = append(cmd, net.JoinHostPort(ip+podSufix, port))
@@ -167,7 +167,7 @@ func (r *RedisClient) AddSlave(ip, anyIP, port, password, masterID string, rc *c
 	cmd = append(cmd, masterID)
 	return r.ExecuteCmd(cmd, rc.Namespace, anyIP)
 }
-func (r *RedisClient) DelNode(anyIP, port, id, password string, rc *cacheranryliov1beta1.RedisCluster) (string, error) {
+func (r *RedisClient) DelNode(anyIP, port, id, password string, rc *redisv1beta1.RedisCluster) (string, error) {
 	cmd := []string{"redis-cli", "--cluster", "del-node"}
 	cmd = append(cmd, net.JoinHostPort(anyIP, port))
 	cmd = append(cmd, id)

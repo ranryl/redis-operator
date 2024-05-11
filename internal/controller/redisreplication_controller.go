@@ -23,6 +23,7 @@ import (
 	"strconv"
 	"time"
 
+	redisv1beta1 "github.com/ranryl/redis-operator/api/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -32,8 +33,6 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
-
-	cacheranryliov1beta1 "github.com/ranryl/redis-operator/api/v1beta1"
 )
 
 // RedisReplicationReconciler reconciles a RedisReplication object
@@ -42,9 +41,9 @@ type RedisReplicationReconciler struct {
 	Scheme *runtime.Scheme
 }
 
-//+kubebuilder:rbac:groups=cache.ranryl.io.ranryl.com,resources=redisreplications,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=cache.ranryl.io.ranryl.com,resources=redisreplications/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=cache.ranryl.io.ranryl.com,resources=redisreplications/finalizers,verbs=update
+//+kubebuilder:rbac:groups=redis.ranryl.io,resources=redisreplications,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=redis.ranryl.io,resources=redisreplications/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=redis.ranryl.io,resources=redisreplications/finalizers,verbs=update
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -54,10 +53,10 @@ type RedisReplicationReconciler struct {
 // the user.
 //
 // For more details, check Reconcile and its Result here:
-// - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.17.3/pkg/reconcile
+// - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.17.2/pkg/reconcile
 func (r *RedisReplicationReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	_ = log.FromContext(ctx)
-	instance := &cacheranryliov1beta1.RedisReplication{}
+	instance := &redisv1beta1.RedisReplication{}
 	if err := r.Get(ctx, req.NamespacedName, instance); err != nil {
 		if !errors.IsNotFound(err) {
 			return ctrl.Result{}, nil
@@ -170,7 +169,7 @@ func (r *RedisReplicationReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	}
 	return ctrl.Result{}, nil
 }
-func (r *RedisReplicationReconciler) NewMaster(name string, app *cacheranryliov1beta1.RedisReplication) *appsv1.StatefulSet {
+func (r *RedisReplicationReconciler) NewMaster(name string, app *redisv1beta1.RedisReplication) *appsv1.StatefulSet {
 	sts := r.NewStatefulSet("master", app)
 	sts.Spec.Replicas = &app.Spec.MasterReplica
 	sts.ObjectMeta.Name = name
@@ -195,7 +194,7 @@ func (r *RedisReplicationReconciler) NewMaster(name string, app *cacheranryliov1
 	}
 	return sts
 }
-func (r *RedisReplicationReconciler) NewMasterConfig(name string, app *cacheranryliov1beta1.RedisReplication) *corev1.ConfigMap {
+func (r *RedisReplicationReconciler) NewMasterConfig(name string, app *redisv1beta1.RedisReplication) *corev1.ConfigMap {
 	if app.Spec.RedisConfig == "" {
 		return nil
 	}
@@ -215,7 +214,7 @@ func (r *RedisReplicationReconciler) NewMasterConfig(name string, app *cacheranr
 		Data: data,
 	}
 }
-func (r *RedisReplicationReconciler) NewMasterService(name string, app *cacheranryliov1beta1.RedisReplication) *corev1.Service {
+func (r *RedisReplicationReconciler) NewMasterService(name string, app *redisv1beta1.RedisReplication) *corev1.Service {
 	labels := app.Labels
 	labels["app"] = "master"
 	return &corev1.Service{
@@ -242,7 +241,7 @@ func (r *RedisReplicationReconciler) NewMasterService(name string, app *cacheran
 		},
 	}
 }
-func (r *RedisReplicationReconciler) NewSlave(name string, app *cacheranryliov1beta1.RedisReplication) *appsv1.StatefulSet {
+func (r *RedisReplicationReconciler) NewSlave(name string, app *redisv1beta1.RedisReplication) *appsv1.StatefulSet {
 	sts := r.NewStatefulSet("slave", app)
 	sts.Spec.Replicas = &app.Spec.SlaveReplica
 	sts.ObjectMeta.Name = name
@@ -265,7 +264,7 @@ func (r *RedisReplicationReconciler) NewSlave(name string, app *cacheranryliov1b
 	sts.Spec.Template.Spec.Containers[0].Args = append(sts.Spec.Template.Spec.Containers[0].Args, app.Spec.ConfigPath)
 	return sts
 }
-func (r *RedisReplicationReconciler) NewSlaveConfig(name string, app *cacheranryliov1beta1.RedisReplication, masterPodName string) *corev1.ConfigMap {
+func (r *RedisReplicationReconciler) NewSlaveConfig(name string, app *redisv1beta1.RedisReplication, masterPodName string) *corev1.ConfigMap {
 	if app.Spec.SlaveConfig == "" {
 		return nil
 	}
@@ -286,7 +285,7 @@ func (r *RedisReplicationReconciler) NewSlaveConfig(name string, app *cacheranry
 		Data: data,
 	}
 }
-func (r *RedisReplicationReconciler) NewStatefulSet(appName string, app *cacheranryliov1beta1.RedisReplication) *appsv1.StatefulSet {
+func (r *RedisReplicationReconciler) NewStatefulSet(appName string, app *redisv1beta1.RedisReplication) *appsv1.StatefulSet {
 	labels := app.Labels
 	labels["app"] = appName
 	selector := &metav1.LabelSelector{MatchLabels: labels}
@@ -302,8 +301,8 @@ func (r *RedisReplicationReconciler) NewStatefulSet(appName string, app *cachera
 			Labels:      app.Labels,
 			OwnerReferences: []metav1.OwnerReference{
 				*metav1.NewControllerRef(app, schema.GroupVersionKind{
-					Group:   cacheranryliov1beta1.GroupVersion.Group,
-					Version: cacheranryliov1beta1.GroupVersion.Version,
+					Group:   redisv1beta1.GroupVersion.Group,
+					Version: redisv1beta1.GroupVersion.Version,
 					Kind:    app.Kind,
 				}),
 			},
@@ -350,6 +349,6 @@ func (r *RedisReplicationReconciler) NewStatefulSet(appName string, app *cachera
 // SetupWithManager sets up the controller with the Manager.
 func (r *RedisReplicationReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&cacheranryliov1beta1.RedisReplication{}).
+		For(&redisv1beta1.RedisReplication{}).
 		Complete(r)
 }

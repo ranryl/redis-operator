@@ -27,7 +27,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	cacheranryliov1beta1 "github.com/ranryl/redis-operator/api/v1beta1"
+	redisv1beta1 "github.com/ranryl/redis-operator/api/v1beta1"
 )
 
 var _ = Describe("RedisCluster Controller", func() {
@@ -40,13 +40,13 @@ var _ = Describe("RedisCluster Controller", func() {
 			Name:      resourceName,
 			Namespace: "default", // TODO(user):Modify as needed
 		}
-		rediscluster := &cacheranryliov1beta1.RedisCluster{}
+		rediscluster := &redisv1beta1.RedisCluster{}
 
 		BeforeEach(func() {
 			By("creating the custom resource for the Kind RedisCluster")
 			err := k8sClient.Get(ctx, typeNamespacedName, rediscluster)
 			if err != nil && errors.IsNotFound(err) {
-				resource := &cacheranryliov1beta1.RedisCluster{
+				resource := &redisv1beta1.RedisCluster{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      resourceName,
 						Namespace: "default",
@@ -59,7 +59,7 @@ var _ = Describe("RedisCluster Controller", func() {
 
 		AfterEach(func() {
 			// TODO(user): Cleanup logic after each test, like removing the resource instance.
-			resource := &cacheranryliov1beta1.RedisCluster{}
+			resource := &redisv1beta1.RedisCluster{}
 			err := k8sClient.Get(ctx, typeNamespacedName, resource)
 			Expect(err).NotTo(HaveOccurred())
 

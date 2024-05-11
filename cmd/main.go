@@ -34,7 +34,7 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
-	cacheranryliov1beta1 "github.com/ranryl/redis-operator/api/v1beta1"
+	redisv1beta1 "github.com/ranryl/redis-operator/api/v1beta1"
 	"github.com/ranryl/redis-operator/internal/controller"
 	"github.com/ranryl/redis-operator/internal/redisclient"
 	//+kubebuilder:scaffold:imports
@@ -48,7 +48,7 @@ var (
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 
-	utilruntime.Must(cacheranryliov1beta1.AddToScheme(scheme))
+	utilruntime.Must(redisv1beta1.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
 
@@ -105,7 +105,7 @@ func main() {
 		WebhookServer:          webhookServer,
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
-		LeaderElectionID:       "67a3293d.ranryl.com",
+		LeaderElectionID:       "67a3293d.ranryl.io",
 		// LeaderElectionReleaseOnCancel defines if the leader should step down voluntarily
 		// when the Manager ends. This requires the binary to immediately end when the
 		// Manager is stopped, otherwise, this setting is unsafe. Setting this significantly
@@ -122,10 +122,7 @@ func main() {
 		setupLog.Error(err, "unable to start manager")
 		os.Exit(1)
 	}
-	client, err := redisclient.NewRedisClient()
-	if err != nil {
-		panic(err)
-	}
+
 	if err = (&controller.RedisReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
@@ -146,6 +143,10 @@ func main() {
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "RedisSentinel")
 		os.Exit(1)
+	}
+	client, err := redisclient.NewRedisClient()
+	if err != nil {
+		panic(err)
 	}
 	if err = (&controller.RedisClusterReconciler{
 		Client:      mgr.GetClient(),

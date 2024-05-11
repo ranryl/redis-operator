@@ -24,24 +24,23 @@ import (
 	"strconv"
 	"time"
 
+	redisv1beta1 "github.com/ranryl/redis-operator/api/v1beta1"
+	"github.com/ranryl/redis-operator/internal/redisclient"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
-
-	cacheranryliov1beta1 "github.com/ranryl/redis-operator/api/v1beta1"
-	"github.com/ranryl/redis-operator/internal/redisclient"
-	"k8s.io/apimachinery/pkg/api/errors"
 )
 
 // RedisClusterReconciler reconciles a RedisCluster object
 type RedisClusterReconciler struct {
 	client.Client
-	RedisClient *redisclient.RedisClient
 	Scheme      *runtime.Scheme
+	RedisClient *redisclient.RedisClient
 }
 
 const (
@@ -49,9 +48,9 @@ const (
 	RetryTimes       = 3
 )
 
-//+kubebuilder:rbac:groups=cache.ranryl.io.ranryl.com,resources=redisclusters,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=cache.ranryl.io.ranryl.com,resources=redisclusters/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=cache.ranryl.io.ranryl.com,resources=redisclusters/finalizers,verbs=update
+//+kubebuilder:rbac:groups=redis.ranryl.io,resources=redisclusters,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=redis.ranryl.io,resources=redisclusters/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=redis.ranryl.io,resources=redisclusters/finalizers,verbs=update
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -61,11 +60,11 @@ const (
 // the user.
 //
 // For more details, check Reconcile and its Result here:
-// - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.17.3/pkg/reconcile
+// - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.17.2/pkg/reconcile
 func (r *RedisClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := log.FromContext(ctx)
 	logger.Info("Reconciler myredis cluster")
-	instance := &cacheranryliov1beta1.RedisCluster{}
+	instance := &redisv1beta1.RedisCluster{}
 	if err := r.Get(ctx, req.NamespacedName, instance); err != nil {
 		if !errors.IsNotFound(err) {
 			return ctrl.Result{}, nil
@@ -109,7 +108,7 @@ func (r *RedisClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		if err := r.Update(ctx, cm); err != nil {
 			return ctrl.Result{}, err
 		}
-		oldSpec := &cacheranryliov1beta1.RedisCluster{}
+		oldSpec := &redisv1beta1.RedisCluster{}
 		lastApplied := "kubectl.kubernetes.io/last-applied-configuration"
 		if err := json.Unmarshal([]byte(instance.Annotations[lastApplied]), oldSpec); err != nil {
 			logger.Info(err.Error())
@@ -210,7 +209,7 @@ func (r *RedisClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request
 
 	return ctrl.Result{}, nil
 }
-func (r *RedisClusterReconciler) ScalerUp(knownNodes, total int, instance *cacheranryliov1beta1.RedisCluster) (ctrl.Result, error) {
+func (r *RedisClusterReconciler) ScalerUp(knownNodes, total int, instance *redisv1beta1.RedisCluster) (ctrl.Result, error) {
 	connIP := instance.Name + "-0"
 	port := strconv.Itoa(int(instance.Spec.Port))
 	for i := knownNodes; i < total; i++ {
@@ -273,7 +272,7 @@ func (r *RedisClusterReconciler) ScalerUp(knownNodes, total int, instance *cache
 	return ctrl.Result{}, nil
 
 }
-func (r *RedisClusterReconciler) ScalerDown(knownNodes, total int, namespace string, instance *cacheranryliov1beta1.RedisCluster) (ctrl.Result, error) {
+func (r *RedisClusterReconciler) ScalerDown(knownNodes, total int, namespace string, instance *redisv1beta1.RedisCluster) (ctrl.Result, error) {
 	// 缩容
 	connIP := instance.Name + "-0"
 	port := strconv.Itoa(int(instance.Spec.Port))
@@ -357,7 +356,7 @@ func (r *RedisClusterReconciler) ScalerDown(knownNodes, total int, namespace str
 	log.Log.Info("reduce instance succeed")
 	return ctrl.Result{}, nil
 }
-func (r *RedisClusterReconciler) CreateRedisCluster(app *cacheranryliov1beta1.RedisCluster) (string, error) {
+func (r *RedisClusterReconciler) CreateRedisCluster(app *redisv1beta1.RedisCluster) (string, error) {
 	minShard := app.Spec.Shard
 	if minShard > MinClusterShards {
 		minShard = MinClusterShards
@@ -370,7 +369,7 @@ func (r *RedisClusterReconciler) CreateRedisCluster(app *cacheranryliov1beta1.Re
 	port := strconv.Itoa(int(app.Spec.Port))
 	return r.RedisClient.CreateCluster(ips, port, "", app)
 }
-func (r *RedisClusterReconciler) NewRedisConfig(app *cacheranryliov1beta1.RedisCluster) *corev1.ConfigMap {
+func (r *RedisClusterReconciler) NewRedisConfig(app *redisv1beta1.RedisCluster) *corev1.ConfigMap {
 	data := make(map[string]string)
 	data["redis.conf"] = app.Spec.RedisConfig
 	return &corev1.ConfigMap{
@@ -387,7 +386,7 @@ func (r *RedisClusterReconciler) NewRedisConfig(app *cacheranryliov1beta1.RedisC
 		Data: data,
 	}
 }
-func (r *RedisClusterReconciler) NewRedisService(app *cacheranryliov1beta1.RedisCluster) *corev1.Service {
+func (r *RedisClusterReconciler) NewRedisService(app *redisv1beta1.RedisCluster) *corev1.Service {
 	app.Labels["app"] = app.Name
 	return &corev1.Service{
 		TypeMeta: metav1.TypeMeta{
@@ -412,7 +411,7 @@ func (r *RedisClusterReconciler) NewRedisService(app *cacheranryliov1beta1.Redis
 		},
 	}
 }
-func (r *RedisClusterReconciler) NewRedisSts(app *cacheranryliov1beta1.RedisCluster, namespace string) *appsv1.StatefulSet {
+func (r *RedisClusterReconciler) NewRedisSts(app *redisv1beta1.RedisCluster, namespace string) *appsv1.StatefulSet {
 	app.Labels["app"] = app.Name
 	selector := &metav1.LabelSelector{MatchLabels: app.Labels}
 	replicas := (app.Spec.Replicas + 1) * app.Spec.Shard
@@ -488,7 +487,7 @@ func (r *RedisClusterReconciler) NewRedisSts(app *cacheranryliov1beta1.RedisClus
 // SetupWithManager sets up the controller with the Manager.
 func (r *RedisClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&cacheranryliov1beta1.RedisCluster{}).
+		For(&redisv1beta1.RedisCluster{}).
 		Owns(&appsv1.StatefulSet{}).
 		Complete(r)
 }

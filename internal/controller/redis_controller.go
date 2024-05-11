@@ -43,9 +43,9 @@ type RedisReconciler struct {
 	Scheme *runtime.Scheme
 }
 
-//+kubebuilder:rbac:groups=cache.ranryl.io.ranryl.com,resources=redis,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=cache.ranryl.io.ranryl.com,resources=redis/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=cache.ranryl.io.ranryl.com,resources=redis/finalizers,verbs=update
+//+kubebuilder:rbac:groups=redis.ranryl.io,resources=redis,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=redis.ranryl.io,resources=redis/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=redis.ranryl.io,resources=redis/finalizers,verbs=update
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -55,7 +55,7 @@ type RedisReconciler struct {
 // the user.
 //
 // For more details, check Reconcile and its Result here:
-// - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.17.3/pkg/reconcile
+// - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.17.2/pkg/reconcile
 func (r *RedisReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := log.FromContext(ctx)
 	logger.Info("Reconciler myredis")

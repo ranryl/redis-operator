@@ -1,4 +1,4 @@
-apiVersion: cache.ranryl.io.ranryl.com/v1beta1
+apiVersion: redis.ranryl.io/v1beta1
 kind: RedisCluster
 metadata:
   labels:
@@ -65,4 +65,3 @@ spec:
     daemonize no
     pidfile /var/run/redis_6379.pid
     cluster-enabled yes
-

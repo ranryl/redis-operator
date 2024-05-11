@@ -27,7 +27,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	cacheranryliov1beta1 "github.com/ranryl/redis-operator/api/v1beta1"
+	redisv1beta1 "github.com/ranryl/redis-operator/api/v1beta1"
 )
 
 var _ = Describe("RedisSentinel Controller", func() {
@@ -40,13 +40,13 @@ var _ = Describe("RedisSentinel Controller", func() {
 			Name:      resourceName,
 			Namespace: "default", // TODO(user):Modify as needed
 		}
-		redissentinel := &cacheranryliov1beta1.RedisSentinel{}
+		redissentinel := &redisv1beta1.RedisSentinel{}
 
 		BeforeEach(func() {
 			By("creating the custom resource for the Kind RedisSentinel")
 			err := k8sClient.Get(ctx, typeNamespacedName, redissentinel)
 			if err != nil && errors.IsNotFound(err) {
-				resource := &cacheranryliov1beta1.RedisSentinel{
+				resource := &redisv1beta1.RedisSentinel{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      resourceName,
 						Namespace: "default",
@@ -59,7 +59,7 @@ var _ = Describe("RedisSentinel Controller", func() {
 
 		AfterEach(func() {
 			// TODO(user): Cleanup logic after each test, like removing the resource instance.
-			resource := &cacheranryliov1beta1.RedisSentinel{}
+			resource := &redisv1beta1.RedisSentinel{}
 			err := k8sClient.Get(ctx, typeNamespacedName, resource)
 			Expect(err).NotTo(HaveOccurred())
 

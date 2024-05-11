@@ -1,7 +1,7 @@
 ## Append samples of your project ##
 resources:
-- cache.ranryl.io_v1beta1_redis.yaml
-- cache.ranryl.io_v1beta1_redisreplication.yaml
-- cache.ranryl.io_v1beta1_redissentinel.yaml
-- cache.ranryl.io_v1beta1_rediscluster.yaml
+- redis_v1beta1_redis.yaml
+- redis_v1beta1_redisreplication.yaml
+- redis_v1beta1_redissentinel.yaml
+- redis_v1beta1_rediscluster.yaml
 #+kubebuilder:scaffold:manifestskustomizesamples

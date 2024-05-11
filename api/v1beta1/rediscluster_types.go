@@ -46,7 +46,6 @@ type RedisClusterSpec struct {
 	VolumeMounts         []corev1.VolumeMount           `json:"volumeMounts,omitempty"`
 	VolumeClaimTemplates []corev1.PersistentVolumeClaim `json:"volumeClaimTemplates,omitempty"`
 }
-
 type RedisClusterState string
 
 // RedisClusterStatus defines the observed state of RedisCluster
@@ -61,8 +60,7 @@ type RedisClusterStatus struct {
 const (
 	RedisClusterInitializing RedisClusterState = "Initializing"
 	RedisClusterBootstrap    RedisClusterState = "Bootstrap"
-	// RedisClusterReady means the RedisCluster is ready for use, we use redis-cli --cluster check 127.0.0.1:6379 to check the cluster status
-	RedisClusterReady RedisClusterState = "Ready"
+	RedisClusterReady        RedisClusterState = "Ready"
 	// RedisClusterFailed       RedisClusterState = "Failed"
 )
 

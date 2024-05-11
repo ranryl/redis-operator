@@ -2,7 +2,7 @@
 # This file is used to track the info used to scaffold your project
 # and allow the plugins properly work.
 # More info: https://book.kubebuilder.io/reference/project-config.html
-domain: ranryl.com
+domain: ranryl.io
 layout:
 - go.kubebuilder.io/v4
 projectName: redis-operator
@@ -12,8 +12,8 @@ resources:
     crdVersion: v1
     namespaced: true
   controller: true
-  domain: ranryl.com
-  group: cache.ranryl.io
+  domain: ranryl.io
+  group: redis
   kind: Redis
   path: github.com/ranryl/redis-operator/api/v1beta1
   version: v1beta1
@@ -21,8 +21,8 @@ resources:
     crdVersion: v1
     namespaced: true
   controller: true
-  domain: ranryl.com
-  group: cache.ranryl.io
+  domain: ranryl.io
+  group: redis
   kind: RedisReplication
   path: github.com/ranryl/redis-operator/api/v1beta1
   version: v1beta1
@@ -30,8 +30,8 @@ resources:
     crdVersion: v1
     namespaced: true
   controller: true
-  domain: ranryl.com
-  group: cache.ranryl.io
+  domain: ranryl.io
+  group: redis
   kind: RedisSentinel
   path: github.com/ranryl/redis-operator/api/v1beta1
   version: v1beta1
@@ -39,8 +39,8 @@ resources:
     crdVersion: v1
     namespaced: true
   controller: true
-  domain: ranryl.com
-  group: cache.ranryl.io
+  domain: ranryl.io
+  group: redis
   kind: RedisCluster
   path: github.com/ranryl/redis-operator/api/v1beta1
   version: v1beta1

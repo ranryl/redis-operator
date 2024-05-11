@@ -3,12 +3,16 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   labels:
-    app.kubernetes.io/name: redis-operator
+    app.kubernetes.io/name: clusterrole
+    app.kubernetes.io/instance: redis-editor-role
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: redis-operator
+    app.kubernetes.io/part-of: redis-operator
     app.kubernetes.io/managed-by: kustomize
   name: redis-editor-role
 rules:
 - apiGroups:
-  - cache.ranryl.io.ranryl.com
+  - redis.ranryl.io
   resources:
   - redis
   verbs:
@@ -20,7 +24,7 @@ rules:
   - update
   - watch
 - apiGroups:
-  - cache.ranryl.io.ranryl.com
+  - redis.ranryl.io
   resources:
   - redis/status
   verbs:
