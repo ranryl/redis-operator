@@ -87,17 +87,16 @@ func (r *RedisClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	if err := r.Get(ctx, req.NamespacedName, oldcm); err != nil {
 		if errors.IsNotFound(err) {
 			if err := r.Create(ctx, cm); err != nil {
-				if !errors.IsAlreadyExists(err) {
-					return ctrl.Result{}, err
-				}
+				log.Log.Error(err, "create cm err:")
+				return ctrl.Result{RequeueAfter: 10 * time.Second}, err
 			}
 		} else {
-			log.Log.Error(err, "get configmap err:")
+			log.Log.Error(err, "get cm err:")
 			return ctrl.Result{RequeueAfter: 10 * time.Second}, err
 		}
 	} else {
 		if err := r.Update(ctx, cm); err != nil {
-			log.Log.Error(err, "update configmap err:")
+			log.Log.Error(err, "update cm err:")
 			return ctrl.Result{RequeueAfter: 10 * time.Second}, err
 		}
 	}

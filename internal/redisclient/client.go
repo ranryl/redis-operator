@@ -69,7 +69,7 @@ func (r *RedisClient) GetClusterSlots(connIP, port, nodeID string) (int, error) 
 			}
 		}
 	}
-	return 0, errors.New("not found")
+	return 0, errors.New("master node slots not found ")
 }
 func (r *RedisClient) GetClusterSize(ip, port, password, namespace string) (int, int, error) {
 	cmd := []string{"redis-cli", "cluster", "info"}
