@@ -74,7 +74,159 @@ make uninstall
 ```sh
 make undeploy
 ```
+#### Examples
+create redis instance
+```
+apiVersion: redis.ranryl.io/v1beta1
+kind: Redis
+metadata:
+  labels:
+    app.kubernetes.io/name: redis-operator
+    app.kubernetes.io/managed-by: kustomize
+  name: redis-sample
+spec:
+  image: "redis:7.2.4"
+  port: 6379
 
+```
+create redis replication instance
+```
+apiVersion: redis.ranryl.io/v1beta1
+kind: RedisReplication
+metadata:
+  labels:
+    app.kubernetes.io/name: redis-operator
+    app.kubernetes.io/managed-by: kustomize
+  name: redisreplication-sample
+spec:
+  image: "redis:7.2.4"
+  masterReplica: 1
+  slaveReplica: 2
+  port: 6379
+  configPath: "/usr/local/etc/redis/redis.conf"
+  slaveConfig: |
+    bind * -::*
+    protected-mode no
+    port 6379
+    tcp-backlog 511
+    timeout 0
+    tcp-keepalive 300
+    daemonize no
+    pidfile /var/run/redis_6379.pid
+    #replicaof 127.0.0.1 6379
+```
+create redis sentinel instance
+```
+apiVersion: redis.ranryl.io/v1beta1
+kind: RedisSentinel
+metadata:
+  labels:
+    app.kubernetes.io/name: redis-operator
+    app.kubernetes.io/managed-by: kustomize
+  name: redissentinel-sample
+spec:
+  image: "redis:7.2.4"
+  masterReplica: 1
+  slaveReplica: 2
+  sentinelReplica: 3
+  port: 6379
+  configPath: "/usr/local/etc/redis/redis.conf"
+  sentinelConfigPath: "/data/redis-sentinel.conf"
+  slaveConfig: |
+    bind * -::*
+    protected-mode no
+    port 6379
+    tcp-backlog 511
+    timeout 0
+    tcp-keepalive 300
+    daemonize no
+    pidfile /var/run/redis_6379.pid
+    #replicaof 127.0.0.1 6379
+  sentinelConfig: |
+    port 26379
+    daemonize no
+    pidfile /var/run/redis-sentinel.pid
+    logfile ""
+    dir /tmp
+    #sentinel monitor mymaster 127.0.0.1 6379 2
+    sentinel down-after-milliseconds mymaster 30000
+    acllog-max-len 128
+    sentinel parallel-syncs mymaster 1
+    sentinel failover-timeout mymaster 180000
+    sentinel deny-scripts-reconfig yes
+    SENTINEL resolve-hostnames yes
+    SENTINEL announce-hostnames yes
+```
+create redis cluster
+```
+apiVersion: redis.ranryl.io/v1beta1
+kind: RedisCluster
+metadata:
+  labels:
+    app.kubernetes.io/name: redis-operator
+    app.kubernetes.io/managed-by: kustomize
+  name: rediscluster-sample
+spec:
+  image: "redis:7.2.4"
+  replicas: 1
+  shard: 3
+  port: 6379
+  nodeSelector:
+    kubernetes.io/hostname: lima-k3s
+  priorityClassName: system-node-critical
+  livenessProbe:
+    tcpSocket:
+        port: 6379
+    initialDelaySeconds: 2
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 3
+    successThreshold: 1
+  readinessProbe:
+    tcpSocket:
+        port: 6379
+    initialDelaySeconds: 2
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 3
+    successThreshold: 1
+  volumeMounts:
+  # - mountPath: /data
+  #   name: data
+  #   readOnly: false
+  - mountPath: /usr/local/etc/redis/redis.conf
+    name: rediscluster-sample
+    subPath: redis.conf
+  volumes:
+  - configMap:
+      name: rediscluster-sample
+    name: rediscluster-sample
+  # volumeClaimTemplates:
+  # - metadata:
+  #     namespace: default
+  #     name: data
+  #   apiVersion: v1
+  #   kind: PersistentVolumeClaim
+  #   spec:
+  #     accessModes:
+  #     - ReadWriteOnce
+  #     resources:
+  #       requests:
+  #         storage: 1G
+  #     storageClassName: local-path
+  args: 
+    - /usr/local/etc/redis/redis.conf
+  redisConfig: |
+    bind * -::*
+    protected-mode no
+    port 6379
+    tcp-backlog 511
+    timeout 0
+    tcp-keepalive 300
+    daemonize no
+    pidfile /var/run/redis_6379.pid
+    cluster-enabled yes
+```
 ## Project Distribution
 
 Following are the steps to build the installer and distribute this project to users.
