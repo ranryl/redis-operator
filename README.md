@@ -11,6 +11,17 @@
 - Access to a Kubernetes v1.11.3+ cluster.
 
 ### To Deploy on the cluster
+#### 1. install use exits images
+install
+```
+kubectl apply -f https://raw.githubusercontent.com/ranryl/redis-operator/main/dist/install.yaml
+```
+uninstall
+```
+kubectl delete -f https://raw.githubusercontent.com/ranryl/redis-operator/main/dist/install.yaml
+
+```
+#### 2. use source code build your image to installer
 **Build and push your image to the location specified by `IMG`:**
 
 ```sh
@@ -71,7 +82,7 @@ Following are the steps to build the installer and distribute this project to us
 1. Build the installer for the image built and published in the registry:
 
 ```sh
-make build-installer IMG=<some-registry>/redis-operator:tag
+make build-installer IMG=rekca/redis-operator:0.1.0
 ```
 
 NOTE: The makefile target mentioned above generates an 'install.yaml'
@@ -84,7 +95,7 @@ its dependencies.
 Users can just run kubectl apply -f <URL for YAML BUNDLE> to install the project, i.e.:
 
 ```sh
-kubectl apply -f https://raw.githubusercontent.com/<org>/redis-operator/<tag or branch>/dist/install.yaml
+kubectl apply -f https://raw.githubusercontent.com/ranryl/redis-operator/main/dist/install.yaml
 ```
 
 ## Contributing

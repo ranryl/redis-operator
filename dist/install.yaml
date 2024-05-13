@@ -15202,6 +15202,73 @@ metadata:
   name: redis-operator-manager-role
 rules:
 - apiGroups:
+  - ""
+  resources:
+  - configmaps
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - pods/exec
+  verbs:
+  - create
+  - update
+- apiGroups:
+  - ""
+  resources:
+  - serivces
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - services
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - apps
+  resources:
+  - deployments
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - apps
+  resources:
+  - statefulsets
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
   - redis.ranryl.io
   resources:
   - redis
@@ -15462,7 +15529,7 @@ spec:
         - --upstream=http://127.0.0.1:8080/
         - --logtostderr=true
         - --v=0
-        image: gcr.io/kubebuilder/kube-rbac-proxy:v0.15.0
+        image: gcr.lank8s.cn/kubebuilder/kube-rbac-proxy:v0.15.0
         name: kube-rbac-proxy
         ports:
         - containerPort: 8443
@@ -15486,7 +15553,7 @@ spec:
         - --leader-elect
         command:
         - /manager
-        image: docker.io/rekca/redis-operator:0.1.0
+        image: rekca/redis-operator:0.1.0
         livenessProbe:
           httpGet:
             path: /healthz
