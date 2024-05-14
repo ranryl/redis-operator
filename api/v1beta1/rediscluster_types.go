@@ -26,25 +26,23 @@ import (
 
 // RedisClusterSpec defines the desired state of RedisCluster
 type RedisClusterSpec struct {
-	Image                string                         `json:"image"`
-	Replicas             int32                          `json:"replicas,omitempty"`
-	Shard                int32                          `json:"shard"`
-	Port                 int32                          `json:"port,omitempty"`
-	RedisConfig          string                         `json:"redisConfig,omitempty"`
-	HostNetwork          bool                           `json:"hostNetwork,omitempty"`
-	Resources            corev1.ResourceRequirements    `json:"resources,omitempty"`
-	EnvVars              []corev1.EnvVar                `json:"env,omitempty"`
-	Args                 []string                       `json:"args,omitempty"`
-	NodeSelector         map[string]string              `json:"nodeSelector,omitempty"`
-	Affinity             *corev1.Affinity               `json:"affinity,omitempty"`
-	Tolerations          []corev1.Toleration            `json:"toleration,omitempty"`
-	PriorityClassName    string                         `json:"priorityClassName,omitempty"`
-	LivenessProbe        *corev1.Probe                  `json:"livenessProbe,omitempty"`
-	ReadinessProbe       *corev1.Probe                  `json:"readinessProbe,omitempty"`
-	StartupProbe         *corev1.Probe                  `json:"startupProbe,omitempty"`
-	Volumes              []corev1.Volume                `json:"volumes,omitempty"`
-	VolumeMounts         []corev1.VolumeMount           `json:"volumeMounts,omitempty"`
-	VolumeClaimTemplates []corev1.PersistentVolumeClaim `json:"volumeClaimTemplates,omitempty"`
+	Image             string                            `json:"image"`
+	Replicas          int32                             `json:"replicas,omitempty"`
+	Shard             int32                             `json:"shard"`
+	Port              int32                             `json:"port"`
+	RedisConfig       string                            `json:"redisConfig,omitempty"`
+	HostNetwork       bool                              `json:"hostNetwork,omitempty"`
+	Resources         corev1.ResourceRequirements       `json:"resources,omitempty"`
+	EnvVars           []corev1.EnvVar                   `json:"env,omitempty"`
+	Args              []string                          `json:"args,omitempty"`
+	NodeSelector      map[string]string                 `json:"nodeSelector,omitempty"`
+	Affinity          *corev1.Affinity                  `json:"affinity,omitempty"`
+	Tolerations       []corev1.Toleration               `json:"toleration,omitempty"`
+	PriorityClassName string                            `json:"priorityClassName,omitempty"`
+	LivenessProbe     *corev1.Probe                     `json:"livenessProbe,omitempty"`
+	ReadinessProbe    *corev1.Probe                     `json:"readinessProbe,omitempty"`
+	StartupProbe      *corev1.Probe                     `json:"startupProbe,omitempty"`
+	StorageSpec       *corev1.PersistentVolumeClaimSpec `json:"storageSpec,omitempty"`
 }
 type RedisClusterState string
 

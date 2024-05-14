@@ -44,12 +44,6 @@ type RedisClusterReconciler struct {
 	RedisClient *redisclient.RedisClient
 }
 
-const (
-	MinClusterShards = 3
-	RetryTimes       = 3
-	LastApplied      = "kubectl.kubernetes.io/last-applied-configuration"
-)
-
 //+kubebuilder:rbac:groups=redis.ranryl.io,resources=redisclusters,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=redis.ranryl.io,resources=redisclusters/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=redis.ranryl.io,resources=redisclusters/finalizers,verbs=update
@@ -114,10 +108,8 @@ func (r *RedisClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		}
 		return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
 	} else {
-		oldSpec := &redisv1beta1.RedisCluster{}
-		if err := json.Unmarshal([]byte(instance.Annotations[LastApplied]), oldSpec); err != nil {
-			logger.Info(err.Error())
-			return ctrl.Result{}, err
+		if stsInstance.Status.AvailableReplicas != *stsInstance.Spec.Replicas {
+			return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
 		}
 		_, knownNodes, err := r.RedisClient.GetClusterSize(instance.Name+"-0", strconv.Itoa(int(instance.Spec.Port)), "", req.Namespace)
 		if err != nil {
@@ -134,17 +126,24 @@ func (r *RedisClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request
 			}
 			// return ctrl.Result{}, nil
 		}
-		if !reflect.DeepEqual(instance.Spec, *oldSpec) {
-			newRedissts := r.NewRedisSts(instance, req.Namespace)
-			currRedissts := &appsv1.StatefulSet{}
-			if err := r.Client.Get(ctx, req.NamespacedName, currRedissts); err != nil {
+		if instance.Annotations[LastApplied] != "" {
+			oldSpec := &redisv1beta1.RedisCluster{}
+			if err := json.Unmarshal([]byte(instance.Annotations[LastApplied]), oldSpec); err != nil {
 				logger.Info(err.Error())
 				return ctrl.Result{}, err
 			}
-			currRedissts.Spec = newRedissts.Spec
-			if err := r.Client.Update(ctx, currRedissts); err != nil {
-				logger.Info(err.Error())
-				return ctrl.Result{}, err
+			if !reflect.DeepEqual(instance.Spec, *oldSpec) {
+				newRedissts := r.NewRedisSts(instance, req.Namespace)
+				currRedissts := &appsv1.StatefulSet{}
+				if err := r.Client.Get(ctx, req.NamespacedName, currRedissts); err != nil {
+					logger.Info(err.Error())
+					return ctrl.Result{}, err
+				}
+				currRedissts.Spec = newRedissts.Spec
+				if err := r.Client.Update(ctx, currRedissts); err != nil {
+					logger.Info(err.Error())
+					return ctrl.Result{}, err
+				}
 			}
 		}
 	}
@@ -442,7 +441,9 @@ func (r *RedisClusterReconciler) NewRedisSts(app *redisv1beta1.RedisCluster, nam
 	app.Labels["app"] = app.Name
 	selector := &metav1.LabelSelector{MatchLabels: app.Labels}
 	replicas := (app.Spec.Replicas + 1) * app.Spec.Shard
-	return &appsv1.StatefulSet{
+	args := app.Spec.Args
+	args = append(args, ConfigPath)
+	sts := &appsv1.StatefulSet{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "apps/v1",
 			Kind:       "StatefulSet",
@@ -480,15 +481,36 @@ func (r *RedisClusterReconciler) NewRedisSts(app *redisv1beta1.RedisCluster, nam
 									ContainerPort: app.Spec.Port,
 								},
 							},
-							Args:           app.Spec.Args,
-							VolumeMounts:   app.Spec.VolumeMounts,
+							Args: args,
+							VolumeMounts: []corev1.VolumeMount{
+								{
+									Name:      app.Name,
+									MountPath: ConfigPath,
+									SubPath:   "redis.conf",
+								},
+								{
+									Name:      "data",
+									MountPath: DataPath,
+								},
+							},
 							Resources:      app.Spec.Resources,
 							LivenessProbe:  app.Spec.LivenessProbe,
 							ReadinessProbe: app.Spec.ReadinessProbe,
 							StartupProbe:   app.Spec.StartupProbe,
 						},
 					},
-					Volumes:           app.Spec.Volumes,
+					Volumes: []corev1.Volume{
+						{
+							Name: app.Name,
+							VolumeSource: corev1.VolumeSource{
+								ConfigMap: &corev1.ConfigMapVolumeSource{
+									LocalObjectReference: corev1.LocalObjectReference{
+										Name: app.Name,
+									},
+								},
+							},
+						},
+					},
 					NodeSelector:      app.Spec.NodeSelector,
 					Affinity:          app.Spec.Affinity,
 					Tolerations:       app.Spec.Tolerations,
@@ -496,26 +518,27 @@ func (r *RedisClusterReconciler) NewRedisSts(app *redisv1beta1.RedisCluster, nam
 					PriorityClassName: app.Spec.PriorityClassName,
 				},
 			},
-			VolumeClaimTemplates: app.Spec.VolumeClaimTemplates,
-			// VolumeClaimTemplates: []corev1.PersistentVolumeClaim{
-			// 	{
-			// 		ObjectMeta: metav1.ObjectMeta{
-			// 			Name:      "data",
-			// 			Namespace: app.Namespace,
-			// 		},
-			// 		Spec: corev1.PersistentVolumeClaimSpec{
-			// 			AccessModes:      []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
-			// 			StorageClassName: &app.Spec.StorageClassName,
-			// 			Resources: corev1.VolumeResourceRequirements{
-			// 				Requests: corev1.ResourceList{
-			// 					corev1.ResourceStorage: resource.MustParse("100Mi"),
-			// 				},
-			// 			},
-			// 		},
-			// 	},
-			// },
 		},
 	}
+	if app.Spec.StorageSpec != nil {
+		sts.Spec.VolumeClaimTemplates = []corev1.PersistentVolumeClaim{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "data",
+					Namespace: app.Namespace,
+				},
+				Spec: *app.Spec.StorageSpec,
+			},
+		}
+	} else {
+		sts.Spec.Template.Spec.Volumes = append(sts.Spec.Template.Spec.Volumes, corev1.Volume{
+			Name: "data",
+			VolumeSource: corev1.VolumeSource{
+				EmptyDir: &corev1.EmptyDirVolumeSource{},
+			},
+		})
+	}
+	return sts
 }
 
 // SetupWithManager sets up the controller with the Manager.

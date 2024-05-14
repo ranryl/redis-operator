@@ -10,7 +10,6 @@ spec:
   masterReplica: 1
   slaveReplica: 2
   port: 6379
-  configPath: "/usr/local/etc/redis/redis.conf"
   slaveConfig: |
     bind * -::*
     protected-mode no

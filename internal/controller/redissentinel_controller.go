@@ -100,17 +100,18 @@ func (r *RedisSentinelReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 			return ctrl.Result{}, err
 		}
 	} else {
-		oldSpec := &appsv1.StatefulSet{}
-		lastApplied := "kubectl.kubernetes.io/last-applied-configuration"
-		if err := json.Unmarshal([]byte(masterSts.Annotations[lastApplied]), oldSpec); err != nil {
-			log.Log.Info(err.Error())
-			return ctrl.Result{}, err
-		}
-		if !reflect.DeepEqual(newMasterSts.Spec, *oldSpec) {
-			masterSts.Spec = newMasterSts.Spec
-			if err := r.Client.Update(ctx, masterSts); err != nil {
+		if masterSts.Annotations[LastApplied] != "" {
+			oldSpec := &appsv1.StatefulSet{}
+			if err := json.Unmarshal([]byte(masterSts.Annotations[LastApplied]), oldSpec); err != nil {
 				log.Log.Info(err.Error())
 				return ctrl.Result{}, err
+			}
+			if !reflect.DeepEqual(newMasterSts.Spec, *oldSpec) {
+				masterSts.Spec = newMasterSts.Spec
+				if err := r.Client.Update(ctx, masterSts); err != nil {
+					log.Log.Info(err.Error())
+					return ctrl.Result{}, err
+				}
 			}
 		}
 	}
@@ -157,18 +158,19 @@ func (r *RedisSentinelReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 			return ctrl.Result{}, err
 		}
 	} else {
-		oldSpec := &appsv1.StatefulSet{}
-		lastApplied := "kubectl.kubernetes.io/last-applied-configuration"
-		if err := json.Unmarshal([]byte(slaveSts.Annotations[lastApplied]), oldSpec); err != nil {
-			log.Log.Info(err.Error())
-			return ctrl.Result{}, err
-		}
-		if !reflect.DeepEqual(newSlaveSts.Spec, *oldSpec) {
-
-			slaveSts.Spec = newSlaveSts.Spec
-			if err := r.Client.Update(ctx, slaveSts); err != nil {
+		if slaveSts.Annotations[LastApplied] != "" {
+			oldSpec := &appsv1.StatefulSet{}
+			if err := json.Unmarshal([]byte(slaveSts.Annotations[LastApplied]), oldSpec); err != nil {
 				log.Log.Info(err.Error())
 				return ctrl.Result{}, err
+			}
+			if !reflect.DeepEqual(newSlaveSts.Spec, *oldSpec) {
+
+				slaveSts.Spec = newSlaveSts.Spec
+				if err := r.Client.Update(ctx, slaveSts); err != nil {
+					log.Log.Info(err.Error())
+					return ctrl.Result{}, err
+				}
 			}
 		}
 	}
@@ -200,17 +202,18 @@ func (r *RedisSentinelReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 			return ctrl.Result{}, err
 		}
 	} else {
-		oldSpec := &appsv1.StatefulSet{}
-		lastApplied := "kubectl.kubernetes.io/last-applied-configuration"
-		if err := json.Unmarshal([]byte(sentinelDep.Annotations[lastApplied]), oldSpec); err != nil {
-			log.Log.Info(err.Error())
-			return ctrl.Result{}, err
-		}
-		if !reflect.DeepEqual(newSentinelDep.Spec, *oldSpec) {
-			sentinelDep.Spec = newSentinelDep.Spec
-			if err := r.Client.Update(ctx, sentinelDep); err != nil {
+		if sentinelDep.Annotations[LastApplied] != "" {
+			oldSpec := &appsv1.StatefulSet{}
+			if err := json.Unmarshal([]byte(sentinelDep.Annotations[LastApplied]), oldSpec); err != nil {
 				log.Log.Info(err.Error())
 				return ctrl.Result{}, err
+			}
+			if !reflect.DeepEqual(newSentinelDep.Spec, *oldSpec) {
+				sentinelDep.Spec = newSentinelDep.Spec
+				if err := r.Client.Update(ctx, sentinelDep); err != nil {
+					log.Log.Info(err.Error())
+					return ctrl.Result{}, err
+				}
 			}
 		}
 	}
@@ -231,12 +234,17 @@ func (r *RedisSentinelReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	return ctrl.Result{}, nil
 }
 func (r *RedisSentinelReconciler) NewMaster(name string, app *redisv1beta1.RedisSentinel) *appsv1.StatefulSet {
-	sts := r.NewStatefulSet("master", app)
+	sts := r.NewStatefulSet("master", name, app)
 	sts.Spec.Replicas = &app.Spec.MasterReplica
-	sts.ObjectMeta.Name = name
-	sts.Spec.ServiceName = name
 	if app.Spec.RedisConfig != "" {
-		sts.Spec.Template.Spec.Volumes = append(sts.Spec.Template.Spec.Volumes, corev1.Volume{
+		sts.Spec.Template.Spec.Containers[0].Args = append(sts.Spec.Template.Spec.Containers[0].Args, ConfigPath)
+		configVolumeMount := corev1.VolumeMount{
+			Name:      name,
+			MountPath: ConfigPath,
+			SubPath:   "redis.conf",
+		}
+		sts.Spec.Template.Spec.Containers[0].VolumeMounts = append(sts.Spec.Template.Spec.Containers[0].VolumeMounts, configVolumeMount)
+		configVolume := corev1.Volume{
 			Name: name,
 			VolumeSource: corev1.VolumeSource{
 				ConfigMap: &corev1.ConfigMapVolumeSource{
@@ -245,13 +253,8 @@ func (r *RedisSentinelReconciler) NewMaster(name string, app *redisv1beta1.Redis
 					},
 				},
 			},
-		})
-		sts.Spec.Template.Spec.Containers[0].VolumeMounts = append(sts.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
-			Name:      name,
-			MountPath: app.Spec.ConfigPath,
-			SubPath:   "redis.conf",
-		})
-		sts.Spec.Template.Spec.Containers[0].Args = append(sts.Spec.Template.Spec.Containers[0].Args, app.Spec.ConfigPath)
+		}
+		sts.Spec.Template.Spec.Volumes = append(sts.Spec.Template.Spec.Volumes, configVolume)
 	}
 	return sts
 }
@@ -317,26 +320,28 @@ func (r *RedisSentinelReconciler) NewMasterService(name string, app *redisv1beta
 	}
 }
 func (r *RedisSentinelReconciler) NewSlave(name string, app *redisv1beta1.RedisSentinel) *appsv1.StatefulSet {
-	sts := r.NewStatefulSet("slave", app)
+	sts := r.NewStatefulSet("slave", name, app)
 	sts.Spec.Replicas = &app.Spec.SlaveReplica
-	sts.ObjectMeta.Name = name
-	sts.Spec.ServiceName = name
-	sts.Spec.Template.Spec.Volumes = append(sts.Spec.Template.Spec.Volumes, corev1.Volume{
-		Name: name,
-		VolumeSource: corev1.VolumeSource{
-			ConfigMap: &corev1.ConfigMapVolumeSource{
-				LocalObjectReference: corev1.LocalObjectReference{
-					Name: name,
+	if app.Spec.SlaveConfig != "" {
+		sts.Spec.Template.Spec.Containers[0].Args = append(sts.Spec.Template.Spec.Containers[0].Args, ConfigPath)
+		configVolumeMount := corev1.VolumeMount{
+			Name:      name,
+			MountPath: ConfigPath,
+			SubPath:   "redis.conf",
+		}
+		sts.Spec.Template.Spec.Containers[0].VolumeMounts = append(sts.Spec.Template.Spec.Containers[0].VolumeMounts, configVolumeMount)
+		configVolume := corev1.Volume{
+			Name: name,
+			VolumeSource: corev1.VolumeSource{
+				ConfigMap: &corev1.ConfigMapVolumeSource{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: name,
+					},
 				},
 			},
-		},
-	})
-	sts.Spec.Template.Spec.Containers[0].VolumeMounts = append(sts.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
-		Name:      name,
-		MountPath: app.Spec.ConfigPath,
-		SubPath:   "redis.conf",
-	})
-	sts.Spec.Template.Spec.Containers[0].Args = append(sts.Spec.Template.Spec.Containers[0].Args, app.Spec.ConfigPath)
+		}
+		sts.Spec.Template.Spec.Volumes = append(sts.Spec.Template.Spec.Volumes, configVolume)
+	}
 	return sts
 }
 func (r *RedisSentinelReconciler) NewSlaveConfig(name string, app *redisv1beta1.RedisSentinel, masterPodName string) *corev1.ConfigMap {
@@ -410,7 +415,7 @@ func (r *RedisSentinelReconciler) NewSentinel(name string, app *redisv1beta1.Red
 								},
 							},
 							Command: []string{"/bin/sh"},
-							Args:    []string{"-c", "cat /etc/redis-sentinel.conf > " + app.Spec.SentinelConfigPath},
+							Args:    []string{"-c", "cat /etc/redis-sentinel.conf > " + SentinelConfigPath},
 						},
 					},
 					Containers: []corev1.Container{
@@ -425,7 +430,7 @@ func (r *RedisSentinelReconciler) NewSentinel(name string, app *redisv1beta1.Red
 								},
 							},
 							Args: []string{
-								app.Spec.SentinelConfigPath,
+								SentinelConfigPath,
 								"--sentinel",
 							},
 							VolumeMounts: []corev1.VolumeMount{
@@ -532,17 +537,17 @@ func (r *RedisSentinelReconciler) NewSentinelService(name string, app *redisv1be
 	}
 }
 
-func (r *RedisSentinelReconciler) NewStatefulSet(appName string, app *redisv1beta1.RedisSentinel) *appsv1.StatefulSet {
+func (r *RedisSentinelReconciler) NewStatefulSet(labelAppName, name string, app *redisv1beta1.RedisSentinel) *appsv1.StatefulSet {
 	labels := app.Labels
-	labels["app"] = appName
+	labels["app"] = labelAppName
 	selector := &metav1.LabelSelector{MatchLabels: labels}
-	return &appsv1.StatefulSet{
+	sts := &appsv1.StatefulSet{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "apps/v1",
 			Kind:       "StatefulSet",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        app.Name,
+			Name:        name,
 			Namespace:   app.Namespace,
 			Annotations: app.Annotations,
 			Labels:      app.Labels,
@@ -555,7 +560,7 @@ func (r *RedisSentinelReconciler) NewStatefulSet(appName string, app *redisv1bet
 			},
 		},
 		Spec: appsv1.StatefulSetSpec{
-			ServiceName: app.Name,
+			ServiceName: name,
 			Selector:    selector,
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
@@ -564,7 +569,7 @@ func (r *RedisSentinelReconciler) NewStatefulSet(appName string, app *redisv1bet
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
 						{
-							Name:            app.Name,
+							Name:            name,
 							Image:           app.Spec.Image,
 							ImagePullPolicy: corev1.PullAlways,
 							Ports: []corev1.ContainerPort{
@@ -573,14 +578,18 @@ func (r *RedisSentinelReconciler) NewStatefulSet(appName string, app *redisv1bet
 									ContainerPort: app.Spec.Port,
 								},
 							},
-							VolumeMounts:   app.Spec.VolumeMounts,
+							VolumeMounts: []corev1.VolumeMount{
+								{
+									Name:      "data",
+									MountPath: DataPath,
+								},
+							},
 							Resources:      app.Spec.Resources,
 							LivenessProbe:  app.Spec.LivenessProbe,
 							ReadinessProbe: app.Spec.ReadinessProbe,
 							StartupProbe:   app.Spec.StartupProbe,
 						},
 					},
-					Volumes:           app.Spec.Volumes,
 					NodeSelector:      app.Spec.NodeSelector,
 					Affinity:          app.Spec.Affinity,
 					Tolerations:       app.Spec.Tolerations,
@@ -588,9 +597,27 @@ func (r *RedisSentinelReconciler) NewStatefulSet(appName string, app *redisv1bet
 					PriorityClassName: app.Spec.PriorityClassName,
 				},
 			},
-			VolumeClaimTemplates: app.Spec.VolumeClaimTemplates,
 		},
 	}
+	if app.Spec.StorageSpec != nil {
+		sts.Spec.VolumeClaimTemplates = []corev1.PersistentVolumeClaim{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "data",
+					Namespace: app.Namespace,
+				},
+				Spec: *app.Spec.StorageSpec,
+			},
+		}
+	} else {
+		sts.Spec.Template.Spec.Volumes = append(sts.Spec.Template.Spec.Volumes, corev1.Volume{
+			Name: "data",
+			VolumeSource: corev1.VolumeSource{
+				EmptyDir: &corev1.EmptyDirVolumeSource{},
+			},
+		})
+	}
+	return sts
 }
 
 // SetupWithManager sets up the controller with the Manager.

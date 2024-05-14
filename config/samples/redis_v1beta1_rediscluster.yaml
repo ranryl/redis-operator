@@ -29,32 +29,13 @@ spec:
     timeoutSeconds: 3
     failureThreshold: 3
     successThreshold: 1
-  volumeMounts:
-  # - mountPath: /data
-  #   name: data
-  #   readOnly: false
-  - mountPath: /usr/local/etc/redis/redis.conf
-    name: rediscluster-sample
-    subPath: redis.conf
-  volumes:
-  - configMap:
-      name: rediscluster-sample
-    name: rediscluster-sample
-  # volumeClaimTemplates:
-  # - metadata:
-  #     namespace: default
-  #     name: data
-  #   apiVersion: v1
-  #   kind: PersistentVolumeClaim
-  #   spec:
-  #     accessModes:
-  #     - ReadWriteOnce
-  #     resources:
-  #       requests:
-  #         storage: 1G
-  #     storageClassName: local-path
-  args: 
-    - /usr/local/etc/redis/redis.conf
+  storageSpec:
+    accessModes:
+    - ReadWriteOnce
+    resources:
+      requests:
+        storage: 1G
+    storageClassName: local-path
   redisConfig: |
     bind * -::*
     protected-mode no

@@ -72,6 +72,23 @@ func (r *RedisReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 	if instance.DeletionTimestamp != nil {
 		return reconcile.Result{}, nil
 	}
+	cm := r.NewConfig(instance)
+	if cm != nil {
+		oldcm := &corev1.ConfigMap{}
+		if err := r.Get(ctx, req.NamespacedName, oldcm); err != nil {
+			if !errors.IsNotFound(err) {
+				return ctrl.Result{}, err
+			}
+			if err := r.Create(ctx, cm); err != nil {
+				log.Log.Error(err, "create cm err:")
+			}
+		} else {
+			if err := r.Update(ctx, cm); err != nil {
+				log.Log.Error(err, "update cm err:")
+			}
+		}
+	}
+
 	redisSts := &appsv1.StatefulSet{}
 	if err := r.Client.Get(ctx, req.NamespacedName, redisSts); err != nil {
 		if !errors.IsNotFound(err) {
@@ -91,39 +108,41 @@ func (r *RedisReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 			return ctrl.Result{}, err
 		}
 	} else {
-		// 更新
-		oldSpec := &redisv1beta1.RedisSpec{}
-		if err := json.Unmarshal([]byte(instance.Annotations["spec"]), oldSpec); err != nil {
-			logger.Info(err.Error())
-			return ctrl.Result{}, err
-		}
-		fmt.Println(*oldSpec)
-		fmt.Println(instance.Spec)
-		if !reflect.DeepEqual(instance.Spec, *oldSpec) {
-			newSts := r.NewStatefulSet(instance)
-			currSts := &appsv1.StatefulSet{}
-			if err := r.Client.Get(ctx, req.NamespacedName, currSts); err != nil {
+		if instance.Annotations["spec"] != "" {
+			// 更新
+			oldSpec := &redisv1beta1.RedisSpec{}
+			if err := json.Unmarshal([]byte(instance.Annotations["spec"]), oldSpec); err != nil {
 				logger.Info(err.Error())
 				return ctrl.Result{}, err
 			}
-			currSts.Spec = newSts.Spec
-			if err := r.Client.Update(ctx, currSts); err != nil {
-				logger.Info(err.Error())
-				return ctrl.Result{}, err
-			}
+			fmt.Println(*oldSpec)
+			fmt.Println(instance.Spec)
+			if !reflect.DeepEqual(instance.Spec, *oldSpec) {
+				newSts := r.NewStatefulSet(instance)
+				currSts := &appsv1.StatefulSet{}
+				if err := r.Client.Get(ctx, req.NamespacedName, currSts); err != nil {
+					logger.Info(err.Error())
+					return ctrl.Result{}, err
+				}
+				currSts.Spec = newSts.Spec
+				if err := r.Client.Update(ctx, currSts); err != nil {
+					logger.Info(err.Error())
+					return ctrl.Result{}, err
+				}
 
-			newService := r.NewService(instance)
-			currService := &corev1.Service{}
-			if err := r.Client.Get(ctx, req.NamespacedName, currService); err != nil {
-				logger.Info(err.Error())
-				return ctrl.Result{}, err
-			}
-			currIP := currService.Spec.ClusterIP
-			currService.Spec = newService.Spec
-			currService.Spec.ClusterIP = currIP
-			if err = r.Client.Update(ctx, currService); err != nil {
-				logger.Info(err.Error())
-				return ctrl.Result{}, err
+				newService := r.NewService(instance)
+				currService := &corev1.Service{}
+				if err := r.Client.Get(ctx, req.NamespacedName, currService); err != nil {
+					logger.Info(err.Error())
+					return ctrl.Result{}, err
+				}
+				currIP := currService.Spec.ClusterIP
+				currService.Spec = newService.Spec
+				currService.Spec.ClusterIP = currIP
+				if err = r.Client.Update(ctx, currService); err != nil {
+					logger.Info(err.Error())
+					return ctrl.Result{}, err
+				}
 			}
 		}
 	}
@@ -139,11 +158,39 @@ func (r *RedisReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 	}
 	return ctrl.Result{}, nil
 }
+func (r *RedisReconciler) NewConfig(app *redisv1beta1.Redis) *corev1.ConfigMap {
+	if app.Spec.RedisConfig == "" {
+		return nil
+	}
+	data := make(map[string]string)
+	data["redis.conf"] = app.Spec.RedisConfig
+	return &corev1.ConfigMap{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "apps/v1",
+			Kind:       "ConfigMap",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        app.Name,
+			Namespace:   app.Namespace,
+			Labels:      app.Labels,
+			Annotations: app.Annotations,
+			OwnerReferences: []metav1.OwnerReference{
+				*metav1.NewControllerRef(app, schema.GroupVersionKind{
+					Group:   redisv1beta1.GroupVersion.Group,
+					Version: redisv1beta1.GroupVersion.Version,
+					Kind:    app.Kind,
+				}),
+			},
+		},
+		Data: data,
+	}
+}
+
 func (r *RedisReconciler) NewStatefulSet(app *redisv1beta1.Redis) *appsv1.StatefulSet {
 	labels := map[string]string{"app": app.Name}
 	selector := &metav1.LabelSelector{MatchLabels: labels}
 	var replicas int32 = 1
-	return &appsv1.StatefulSet{
+	sts := &appsv1.StatefulSet{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "apps/v1",
 			Kind:       "StatefulSet",
@@ -181,15 +228,18 @@ func (r *RedisReconciler) NewStatefulSet(app *redisv1beta1.Redis) *appsv1.Statef
 									ContainerPort: app.Spec.Port,
 								},
 							},
-							Args:           app.Spec.Args,
-							VolumeMounts:   app.Spec.VolumeMounts,
 							Resources:      app.Spec.Resources,
 							LivenessProbe:  app.Spec.LivenessProbe,
 							ReadinessProbe: app.Spec.ReadinessProbe,
 							StartupProbe:   app.Spec.StartupProbe,
+							VolumeMounts: []corev1.VolumeMount{
+								{
+									Name:      "data",
+									MountPath: DataPath,
+								},
+							},
 						},
 					},
-					Volumes:           app.Spec.Volumes,
 					NodeSelector:      app.Spec.NodeSelector,
 					Affinity:          app.Spec.Affinity,
 					Tolerations:       app.Spec.Tolerations,
@@ -197,9 +247,47 @@ func (r *RedisReconciler) NewStatefulSet(app *redisv1beta1.Redis) *appsv1.Statef
 					PriorityClassName: app.Spec.PriorityClassName,
 				},
 			},
-			VolumeClaimTemplates: app.Spec.VolumeClaimTemplates,
 		},
 	}
+	if app.Spec.StorageSpec != nil {
+		sts.Spec.VolumeClaimTemplates = []corev1.PersistentVolumeClaim{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "data",
+					Namespace: app.Namespace,
+				},
+				Spec: *app.Spec.StorageSpec,
+			},
+		}
+	} else {
+		sts.Spec.Template.Spec.Volumes = append(sts.Spec.Template.Spec.Volumes, corev1.Volume{
+			Name: "data",
+			VolumeSource: corev1.VolumeSource{
+				EmptyDir: &corev1.EmptyDirVolumeSource{},
+			},
+		})
+	}
+	if app.Spec.RedisConfig != "" {
+		sts.Spec.Template.Spec.Containers[0].Args = append(sts.Spec.Template.Spec.Containers[0].Args, ConfigPath)
+		configVolumeMount := corev1.VolumeMount{
+			Name:      app.Name,
+			MountPath: ConfigPath,
+			SubPath:   "redis.conf",
+		}
+		sts.Spec.Template.Spec.Containers[0].VolumeMounts = append(sts.Spec.Template.Spec.Containers[0].VolumeMounts, configVolumeMount)
+		configVolume := corev1.Volume{
+			Name: app.Name,
+			VolumeSource: corev1.VolumeSource{
+				ConfigMap: &corev1.ConfigMapVolumeSource{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: app.Name,
+					},
+				},
+			},
+		}
+		sts.Spec.Template.Spec.Volumes = append(sts.Spec.Template.Spec.Volumes, configVolume)
+	}
+	return sts
 }
 func (r *RedisReconciler) NewService(app *redisv1beta1.Redis) *corev1.Service {
 	return &corev1.Service{

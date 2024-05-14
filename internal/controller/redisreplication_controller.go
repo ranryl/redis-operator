@@ -98,17 +98,18 @@ func (r *RedisReplicationReconciler) Reconcile(ctx context.Context, req ctrl.Req
 			return ctrl.Result{}, err
 		}
 	} else {
-		oldSpec := &appsv1.StatefulSet{}
-		lastApplied := "kubectl.kubernetes.io/last-applied-configuration"
-		if err := json.Unmarshal([]byte(masterSts.Annotations[lastApplied]), oldSpec); err != nil {
-			log.Log.Info(err.Error())
-			return ctrl.Result{}, err
-		}
-		if !reflect.DeepEqual(newMasterSts.Spec, *oldSpec) {
-			masterSts.Spec = newMasterSts.Spec
-			if err := r.Client.Update(ctx, masterSts); err != nil {
+		if masterSts.Annotations[LastApplied] != "" {
+			oldSpec := &appsv1.StatefulSet{}
+			if err := json.Unmarshal([]byte(masterSts.Annotations[LastApplied]), oldSpec); err != nil {
 				log.Log.Info(err.Error())
 				return ctrl.Result{}, err
+			}
+			if !reflect.DeepEqual(newMasterSts.Spec, *oldSpec) {
+				masterSts.Spec = newMasterSts.Spec
+				if err := r.Client.Update(ctx, masterSts); err != nil {
+					log.Log.Info(err.Error())
+					return ctrl.Result{}, err
+				}
 			}
 		}
 	}
@@ -173,12 +174,17 @@ func (r *RedisReplicationReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	return ctrl.Result{}, nil
 }
 func (r *RedisReplicationReconciler) NewMaster(name string, app *redisv1beta1.RedisReplication) *appsv1.StatefulSet {
-	sts := r.NewStatefulSet("master", app)
+	sts := r.NewStatefulSet("master", name, app)
 	sts.Spec.Replicas = &app.Spec.MasterReplica
-	sts.ObjectMeta.Name = name
-	sts.Spec.ServiceName = name
 	if app.Spec.RedisConfig != "" {
-		sts.Spec.Template.Spec.Volumes = append(sts.Spec.Template.Spec.Volumes, corev1.Volume{
+		sts.Spec.Template.Spec.Containers[0].Args = append(sts.Spec.Template.Spec.Containers[0].Args, ConfigPath)
+		configVolumeMount := corev1.VolumeMount{
+			Name:      name,
+			MountPath: ConfigPath,
+			SubPath:   "redis.conf",
+		}
+		sts.Spec.Template.Spec.Containers[0].VolumeMounts = append(sts.Spec.Template.Spec.Containers[0].VolumeMounts, configVolumeMount)
+		configVolume := corev1.Volume{
 			Name: name,
 			VolumeSource: corev1.VolumeSource{
 				ConfigMap: &corev1.ConfigMapVolumeSource{
@@ -187,13 +193,8 @@ func (r *RedisReplicationReconciler) NewMaster(name string, app *redisv1beta1.Re
 					},
 				},
 			},
-		})
-		sts.Spec.Template.Spec.Containers[0].VolumeMounts = append(sts.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
-			Name:      name,
-			MountPath: app.Spec.ConfigPath,
-			SubPath:   "redis.conf",
-		})
-		sts.Spec.Template.Spec.Containers[0].Args = append(sts.Spec.Template.Spec.Containers[0].Args, app.Spec.ConfigPath)
+		}
+		sts.Spec.Template.Spec.Volumes = append(sts.Spec.Template.Spec.Volumes, configVolume)
 	}
 	return sts
 }
@@ -259,29 +260,31 @@ func (r *RedisReplicationReconciler) NewMasterService(name string, app *redisv1b
 	}
 }
 func (r *RedisReplicationReconciler) NewSlave(name string, app *redisv1beta1.RedisReplication) *appsv1.StatefulSet {
-	sts := r.NewStatefulSet("slave", app)
+	sts := r.NewStatefulSet("slave", name, app)
 	sts.Spec.Replicas = &app.Spec.SlaveReplica
-	sts.ObjectMeta.Name = name
-	sts.Spec.ServiceName = name
-	sts.Spec.Template.Spec.Volumes = append(sts.Spec.Template.Spec.Volumes, corev1.Volume{
-		Name: name,
-		VolumeSource: corev1.VolumeSource{
-			ConfigMap: &corev1.ConfigMapVolumeSource{
-				LocalObjectReference: corev1.LocalObjectReference{
-					Name: name,
+	if app.Spec.SlaveConfig != "" {
+		sts.Spec.Template.Spec.Containers[0].Args = append(sts.Spec.Template.Spec.Containers[0].Args, ConfigPath)
+		configVolumeMount := corev1.VolumeMount{
+			Name:      name,
+			MountPath: ConfigPath,
+			SubPath:   "redis.conf",
+		}
+		sts.Spec.Template.Spec.Containers[0].VolumeMounts = append(sts.Spec.Template.Spec.Containers[0].VolumeMounts, configVolumeMount)
+		configVolume := corev1.Volume{
+			Name: name,
+			VolumeSource: corev1.VolumeSource{
+				ConfigMap: &corev1.ConfigMapVolumeSource{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: name,
+					},
 				},
 			},
-		},
-	})
-	sts.Spec.Template.Spec.Containers[0].VolumeMounts = append(sts.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
-		Name:      name,
-		MountPath: app.Spec.ConfigPath,
-		SubPath:   "redis.conf",
-	})
-	sts.Spec.Template.Spec.Containers[0].Args = append(sts.Spec.Template.Spec.Containers[0].Args, app.Spec.ConfigPath)
+		}
+		sts.Spec.Template.Spec.Volumes = append(sts.Spec.Template.Spec.Volumes, configVolume)
+	}
 	return sts
 }
-func (r *RedisReplicationReconciler) NewSlaveConfig(name string, app *redisv1beta1.RedisReplication, masterPodName string) *corev1.ConfigMap {
+func (r *RedisReplicationReconciler) NewSlaveConfig(appName string, app *redisv1beta1.RedisReplication, masterPodName string) *corev1.ConfigMap {
 	if app.Spec.SlaveConfig == "" {
 		return nil
 	}
@@ -294,7 +297,7 @@ func (r *RedisReplicationReconciler) NewSlaveConfig(name string, app *redisv1bet
 			Kind:       "ConfigMap",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        name,
+			Name:        appName,
 			Namespace:   app.Namespace,
 			Labels:      app.Labels,
 			Annotations: app.Annotations,
@@ -309,17 +312,17 @@ func (r *RedisReplicationReconciler) NewSlaveConfig(name string, app *redisv1bet
 		Data: data,
 	}
 }
-func (r *RedisReplicationReconciler) NewStatefulSet(appName string, app *redisv1beta1.RedisReplication) *appsv1.StatefulSet {
+func (r *RedisReplicationReconciler) NewStatefulSet(labelAppName, name string, app *redisv1beta1.RedisReplication) *appsv1.StatefulSet {
 	labels := app.Labels
-	labels["app"] = appName
+	labels["app"] = labelAppName
 	selector := &metav1.LabelSelector{MatchLabels: labels}
-	return &appsv1.StatefulSet{
+	sts := &appsv1.StatefulSet{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "apps/v1",
 			Kind:       "StatefulSet",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        app.Name,
+			Name:        name,
 			Namespace:   app.Namespace,
 			Annotations: app.Annotations,
 			Labels:      app.Labels,
@@ -332,7 +335,7 @@ func (r *RedisReplicationReconciler) NewStatefulSet(appName string, app *redisv1
 			},
 		},
 		Spec: appsv1.StatefulSetSpec{
-			ServiceName: app.Name,
+			ServiceName: name,
 			Selector:    selector,
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
@@ -341,7 +344,7 @@ func (r *RedisReplicationReconciler) NewStatefulSet(appName string, app *redisv1
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
 						{
-							Name:            app.Name,
+							Name:            name,
 							Image:           app.Spec.Image,
 							ImagePullPolicy: corev1.PullAlways,
 							Ports: []corev1.ContainerPort{
@@ -350,14 +353,18 @@ func (r *RedisReplicationReconciler) NewStatefulSet(appName string, app *redisv1
 									ContainerPort: app.Spec.Port,
 								},
 							},
-							VolumeMounts:   app.Spec.VolumeMounts,
+							VolumeMounts: []corev1.VolumeMount{
+								{
+									Name:      "data",
+									MountPath: DataPath,
+								},
+							},
 							Resources:      app.Spec.Resources,
 							LivenessProbe:  app.Spec.LivenessProbe,
 							ReadinessProbe: app.Spec.ReadinessProbe,
 							StartupProbe:   app.Spec.StartupProbe,
 						},
 					},
-					Volumes:           app.Spec.Volumes,
 					NodeSelector:      app.Spec.NodeSelector,
 					Affinity:          app.Spec.Affinity,
 					Tolerations:       app.Spec.Tolerations,
@@ -365,9 +372,27 @@ func (r *RedisReplicationReconciler) NewStatefulSet(appName string, app *redisv1
 					PriorityClassName: app.Spec.PriorityClassName,
 				},
 			},
-			VolumeClaimTemplates: app.Spec.VolumeClaimTemplates,
 		},
 	}
+	if app.Spec.StorageSpec != nil {
+		sts.Spec.VolumeClaimTemplates = []corev1.PersistentVolumeClaim{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "data",
+					Namespace: app.Namespace,
+				},
+				Spec: *app.Spec.StorageSpec,
+			},
+		}
+	} else {
+		sts.Spec.Template.Spec.Volumes = append(sts.Spec.Template.Spec.Volumes, corev1.Volume{
+			Name: "data",
+			VolumeSource: corev1.VolumeSource{
+				EmptyDir: &corev1.EmptyDirVolumeSource{},
+			},
+		})
+	}
+	return sts
 }
 
 // SetupWithManager sets up the controller with the Manager.

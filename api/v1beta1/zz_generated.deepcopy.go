@@ -161,26 +161,10 @@ func (in *RedisClusterSpec) DeepCopyInto(out *RedisClusterSpec) {
 		*out = new(v1.Probe)
 		(*in).DeepCopyInto(*out)
 	}
-	if in.Volumes != nil {
-		in, out := &in.Volumes, &out.Volumes
-		*out = make([]v1.Volume, len(*in))
-		for i := range *in {
-			(*in)[i].DeepCopyInto(&(*out)[i])
-		}
-	}
-	if in.VolumeMounts != nil {
-		in, out := &in.VolumeMounts, &out.VolumeMounts
-		*out = make([]v1.VolumeMount, len(*in))
-		for i := range *in {
-			(*in)[i].DeepCopyInto(&(*out)[i])
-		}
-	}
-	if in.VolumeClaimTemplates != nil {
-		in, out := &in.VolumeClaimTemplates, &out.VolumeClaimTemplates
-		*out = make([]v1.PersistentVolumeClaim, len(*in))
-		for i := range *in {
-			(*in)[i].DeepCopyInto(&(*out)[i])
-		}
+	if in.StorageSpec != nil {
+		in, out := &in.StorageSpec, &out.StorageSpec
+		*out = new(v1.PersistentVolumeClaimSpec)
+		(*in).DeepCopyInto(*out)
 	}
 }
 
@@ -338,26 +322,10 @@ func (in *RedisReplicationSpec) DeepCopyInto(out *RedisReplicationSpec) {
 		*out = new(v1.Probe)
 		(*in).DeepCopyInto(*out)
 	}
-	if in.Volumes != nil {
-		in, out := &in.Volumes, &out.Volumes
-		*out = make([]v1.Volume, len(*in))
-		for i := range *in {
-			(*in)[i].DeepCopyInto(&(*out)[i])
-		}
-	}
-	if in.VolumeMounts != nil {
-		in, out := &in.VolumeMounts, &out.VolumeMounts
-		*out = make([]v1.VolumeMount, len(*in))
-		for i := range *in {
-			(*in)[i].DeepCopyInto(&(*out)[i])
-		}
-	}
-	if in.VolumeClaimTemplates != nil {
-		in, out := &in.VolumeClaimTemplates, &out.VolumeClaimTemplates
-		*out = make([]v1.PersistentVolumeClaim, len(*in))
-		for i := range *in {
-			(*in)[i].DeepCopyInto(&(*out)[i])
-		}
+	if in.StorageSpec != nil {
+		in, out := &in.StorageSpec, &out.StorageSpec
+		*out = new(v1.PersistentVolumeClaimSpec)
+		(*in).DeepCopyInto(*out)
 	}
 }
 
@@ -483,26 +451,10 @@ func (in *RedisSentinelSpec) DeepCopyInto(out *RedisSentinelSpec) {
 		*out = new(v1.Probe)
 		(*in).DeepCopyInto(*out)
 	}
-	if in.Volumes != nil {
-		in, out := &in.Volumes, &out.Volumes
-		*out = make([]v1.Volume, len(*in))
-		for i := range *in {
-			(*in)[i].DeepCopyInto(&(*out)[i])
-		}
-	}
-	if in.VolumeMounts != nil {
-		in, out := &in.VolumeMounts, &out.VolumeMounts
-		*out = make([]v1.VolumeMount, len(*in))
-		for i := range *in {
-			(*in)[i].DeepCopyInto(&(*out)[i])
-		}
-	}
-	if in.VolumeClaimTemplates != nil {
-		in, out := &in.VolumeClaimTemplates, &out.VolumeClaimTemplates
-		*out = make([]v1.PersistentVolumeClaim, len(*in))
-		for i := range *in {
-			(*in)[i].DeepCopyInto(&(*out)[i])
-		}
+	if in.StorageSpec != nil {
+		in, out := &in.StorageSpec, &out.StorageSpec
+		*out = new(v1.PersistentVolumeClaimSpec)
+		(*in).DeepCopyInto(*out)
 	}
 }
 
@@ -581,26 +533,10 @@ func (in *RedisSpec) DeepCopyInto(out *RedisSpec) {
 		*out = new(v1.Probe)
 		(*in).DeepCopyInto(*out)
 	}
-	if in.Volumes != nil {
-		in, out := &in.Volumes, &out.Volumes
-		*out = make([]v1.Volume, len(*in))
-		for i := range *in {
-			(*in)[i].DeepCopyInto(&(*out)[i])
-		}
-	}
-	if in.VolumeMounts != nil {
-		in, out := &in.VolumeMounts, &out.VolumeMounts
-		*out = make([]v1.VolumeMount, len(*in))
-		for i := range *in {
-			(*in)[i].DeepCopyInto(&(*out)[i])
-		}
-	}
-	if in.VolumeClaimTemplates != nil {
-		in, out := &in.VolumeClaimTemplates, &out.VolumeClaimTemplates
-		*out = make([]v1.PersistentVolumeClaim, len(*in))
-		for i := range *in {
-			(*in)[i].DeepCopyInto(&(*out)[i])
-		}
+	if in.StorageSpec != nil {
+		in, out := &in.StorageSpec, &out.StorageSpec
+		*out = new(v1.PersistentVolumeClaimSpec)
+		(*in).DeepCopyInto(*out)
 	}
 }
 

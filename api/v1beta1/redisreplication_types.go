@@ -26,25 +26,22 @@ import (
 
 // RedisReplicationSpec defines the desired state of RedisReplication
 type RedisReplicationSpec struct {
-	Image                string                         `json:"image"`
-	MasterReplica        int32                          `json:"masterReplica"`
-	SlaveReplica         int32                          `json:"slaveReplica"`
-	Port                 int32                          `json:"port,omitempty"`
-	RedisConfig          string                         `json:"redisConfig,omitempty"`
-	SlaveConfig          string                         `json:"slaveConfig,omitempty"`
-	ConfigPath           string                         `json:"configPath,omitempty"`
-	HostNetwork          bool                           `json:"hostNetwork,omitempty"`
-	Resources            corev1.ResourceRequirements    `json:"resources,omitempty"`
-	NodeSelector         map[string]string              `json:"nodeSelector,omitempty"`
-	Affinity             *corev1.Affinity               `json:"affinity,omitempty"`
-	Tolerations          []corev1.Toleration            `json:"toleration,omitempty"`
-	PriorityClassName    string                         `json:"priorityClassName,omitempty"`
-	LivenessProbe        *corev1.Probe                  `json:"livenessProbe,omitempty"`
-	ReadinessProbe       *corev1.Probe                  `json:"readinessProbe,omitempty"`
-	StartupProbe         *corev1.Probe                  `json:"startupProbe,omitempty"`
-	Volumes              []corev1.Volume                `json:"volumes,omitempty"`
-	VolumeMounts         []corev1.VolumeMount           `json:"volumeMounts,omitempty"`
-	VolumeClaimTemplates []corev1.PersistentVolumeClaim `json:"volumeClaimTemplates,omitempty"`
+	Image             string                            `json:"image"`
+	MasterReplica     int32                             `json:"masterReplica"`
+	SlaveReplica      int32                             `json:"slaveReplica"`
+	Port              int32                             `json:"port,omitempty"`
+	RedisConfig       string                            `json:"redisConfig,omitempty"`
+	SlaveConfig       string                            `json:"slaveConfig,omitempty"`
+	HostNetwork       bool                              `json:"hostNetwork,omitempty"`
+	Resources         corev1.ResourceRequirements       `json:"resources,omitempty"`
+	NodeSelector      map[string]string                 `json:"nodeSelector,omitempty"`
+	Affinity          *corev1.Affinity                  `json:"affinity,omitempty"`
+	Tolerations       []corev1.Toleration               `json:"toleration,omitempty"`
+	PriorityClassName string                            `json:"priorityClassName,omitempty"`
+	LivenessProbe     *corev1.Probe                     `json:"livenessProbe,omitempty"`
+	ReadinessProbe    *corev1.Probe                     `json:"readinessProbe,omitempty"`
+	StartupProbe      *corev1.Probe                     `json:"startupProbe,omitempty"`
+	StorageSpec       *corev1.PersistentVolumeClaimSpec `json:"storageSpec,omitempty"`
 }
 
 // RedisReplicationStatus defines the observed state of RedisReplication

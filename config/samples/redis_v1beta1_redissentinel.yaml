@@ -11,26 +11,12 @@ spec:
   slaveReplica: 2
   sentinelReplica: 3
   port: 6379
-  configPath: "/usr/local/etc/redis/redis.conf"
-  sentinelConfigPath: "/data/redis-sentinel.conf"
-  # volumeMounts:
-  # - mountPath: /data
-  #   name: data
-  #   readOnly: false
-
-  # volumeClaimTemplates:
-  # - metadata:
-  #     namespace: default
-  #     name: data
-  #   apiVersion: v1
-  #   kind: PersistentVolumeClaim
-  #   spec:
-  #     accessModes:
-  #     - ReadWriteOnce
-  #     resources:
-  #       requests:
-  #         storage: 1G
-  #     storageClassName: local-path
+  # accessModes:
+  #   - ReadWriteOnce
+  #   resources:
+  #     requests:
+  #       storage: 1G
+  #   storageClassName: local-path
   slaveConfig: |
     bind * -::*
     protected-mode no
