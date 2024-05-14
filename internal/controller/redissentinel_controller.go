@@ -271,6 +271,13 @@ func (r *RedisSentinelReconciler) NewMasterConfig(name string, app *redisv1beta1
 			Namespace:   app.Namespace,
 			Labels:      app.Labels,
 			Annotations: app.Annotations,
+			OwnerReferences: []metav1.OwnerReference{
+				*metav1.NewControllerRef(app, schema.GroupVersionKind{
+					Group:   redisv1beta1.GroupVersion.Group,
+					Version: redisv1beta1.GroupVersion.Version,
+					Kind:    app.Kind,
+				}),
+			},
 		},
 		Data: data,
 	}
@@ -288,6 +295,13 @@ func (r *RedisSentinelReconciler) NewMasterService(name string, app *redisv1beta
 			Namespace:   app.Namespace,
 			Labels:      labels,
 			Annotations: app.Annotations,
+			OwnerReferences: []metav1.OwnerReference{
+				*metav1.NewControllerRef(app, schema.GroupVersionKind{
+					Group:   redisv1beta1.GroupVersion.Group,
+					Version: redisv1beta1.GroupVersion.Version,
+					Kind:    app.Kind,
+				}),
+			},
 		},
 		Spec: corev1.ServiceSpec{
 			Ports: []corev1.ServicePort{
@@ -342,6 +356,13 @@ func (r *RedisSentinelReconciler) NewSlaveConfig(name string, app *redisv1beta1.
 			Namespace:   app.Namespace,
 			Labels:      app.Labels,
 			Annotations: app.Annotations,
+			OwnerReferences: []metav1.OwnerReference{
+				*metav1.NewControllerRef(app, schema.GroupVersionKind{
+					Group:   redisv1beta1.GroupVersion.Group,
+					Version: redisv1beta1.GroupVersion.Version,
+					Kind:    app.Kind,
+				}),
+			},
 		},
 		Data: data,
 	}
@@ -357,6 +378,13 @@ func (r *RedisSentinelReconciler) NewSentinel(name string, app *redisv1beta1.Red
 			Namespace:   app.Namespace,
 			Annotations: app.Annotations,
 			Labels:      app.Labels,
+			OwnerReferences: []metav1.OwnerReference{
+				*metav1.NewControllerRef(app, schema.GroupVersionKind{
+					Group:   redisv1beta1.GroupVersion.Group,
+					Version: redisv1beta1.GroupVersion.Version,
+					Kind:    app.Kind,
+				}),
+			},
 		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas: &app.Spec.SentinelReplica,
@@ -459,6 +487,13 @@ func (r *RedisSentinelReconciler) NewSentinelConfig(name string, app *redisv1bet
 			Namespace:   app.Namespace,
 			Labels:      app.Labels,
 			Annotations: app.Annotations,
+			OwnerReferences: []metav1.OwnerReference{
+				*metav1.NewControllerRef(app, schema.GroupVersionKind{
+					Group:   redisv1beta1.GroupVersion.Group,
+					Version: redisv1beta1.GroupVersion.Version,
+					Kind:    app.Kind,
+				}),
+			},
 		},
 		Data: data,
 	}
@@ -476,6 +511,13 @@ func (r *RedisSentinelReconciler) NewSentinelService(name string, app *redisv1be
 			Namespace:   app.Namespace,
 			Labels:      labels,
 			Annotations: app.Annotations,
+			OwnerReferences: []metav1.OwnerReference{
+				*metav1.NewControllerRef(app, schema.GroupVersionKind{
+					Group:   redisv1beta1.GroupVersion.Group,
+					Version: redisv1beta1.GroupVersion.Version,
+					Kind:    app.Kind,
+				}),
+			},
 		},
 		Spec: corev1.ServiceSpec{
 			Ports: []corev1.ServicePort{
@@ -555,5 +597,7 @@ func (r *RedisSentinelReconciler) NewStatefulSet(appName string, app *redisv1bet
 func (r *RedisSentinelReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&redisv1beta1.RedisSentinel{}).
+		Owns(&appsv1.StatefulSet{}).
+		Owns(&appsv1.Deployment{}).
 		Complete(r)
 }

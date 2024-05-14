@@ -213,6 +213,13 @@ func (r *RedisReplicationReconciler) NewMasterConfig(name string, app *redisv1be
 			Namespace:   app.Namespace,
 			Labels:      app.Labels,
 			Annotations: app.Annotations,
+			OwnerReferences: []metav1.OwnerReference{
+				*metav1.NewControllerRef(app, schema.GroupVersionKind{
+					Group:   redisv1beta1.GroupVersion.Group,
+					Version: redisv1beta1.GroupVersion.Version,
+					Kind:    app.Kind,
+				}),
+			},
 		},
 		Data: data,
 	}
@@ -230,6 +237,13 @@ func (r *RedisReplicationReconciler) NewMasterService(name string, app *redisv1b
 			Namespace:   app.Namespace,
 			Labels:      labels,
 			Annotations: app.Annotations,
+			OwnerReferences: []metav1.OwnerReference{
+				*metav1.NewControllerRef(app, schema.GroupVersionKind{
+					Group:   redisv1beta1.GroupVersion.Group,
+					Version: redisv1beta1.GroupVersion.Version,
+					Kind:    app.Kind,
+				}),
+			},
 		},
 		Spec: corev1.ServiceSpec{
 			Ports: []corev1.ServicePort{
@@ -284,6 +298,13 @@ func (r *RedisReplicationReconciler) NewSlaveConfig(name string, app *redisv1bet
 			Namespace:   app.Namespace,
 			Labels:      app.Labels,
 			Annotations: app.Annotations,
+			OwnerReferences: []metav1.OwnerReference{
+				*metav1.NewControllerRef(app, schema.GroupVersionKind{
+					Group:   redisv1beta1.GroupVersion.Group,
+					Version: redisv1beta1.GroupVersion.Version,
+					Kind:    app.Kind,
+				}),
+			},
 		},
 		Data: data,
 	}
@@ -353,5 +374,6 @@ func (r *RedisReplicationReconciler) NewStatefulSet(appName string, app *redisv1
 func (r *RedisReplicationReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&redisv1beta1.RedisReplication{}).
+		Owns(&appsv1.StatefulSet{}).
 		Complete(r)
 }

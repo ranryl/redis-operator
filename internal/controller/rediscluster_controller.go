@@ -31,6 +31,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -394,6 +395,13 @@ func (r *RedisClusterReconciler) NewRedisConfig(app *redisv1beta1.RedisCluster) 
 			Namespace:   app.Namespace,
 			Labels:      app.Labels,
 			Annotations: app.Annotations,
+			OwnerReferences: []metav1.OwnerReference{
+				*metav1.NewControllerRef(app, schema.GroupVersionKind{
+					Group:   redisv1beta1.GroupVersion.Group,
+					Version: redisv1beta1.GroupVersion.Version,
+					Kind:    app.Kind,
+				}),
+			},
 		},
 		Data: data,
 	}
@@ -410,6 +418,13 @@ func (r *RedisClusterReconciler) NewRedisService(app *redisv1beta1.RedisCluster)
 			Namespace:   app.Namespace,
 			Labels:      app.Labels,
 			Annotations: app.Annotations,
+			OwnerReferences: []metav1.OwnerReference{
+				*metav1.NewControllerRef(app, schema.GroupVersionKind{
+					Group:   redisv1beta1.GroupVersion.Group,
+					Version: redisv1beta1.GroupVersion.Version,
+					Kind:    app.Kind,
+				}),
+			},
 		},
 		Spec: corev1.ServiceSpec{
 			Ports: []corev1.ServicePort{
@@ -437,6 +452,13 @@ func (r *RedisClusterReconciler) NewRedisSts(app *redisv1beta1.RedisCluster, nam
 			Namespace:   namespace,
 			Annotations: app.Annotations,
 			Labels:      app.Labels,
+			OwnerReferences: []metav1.OwnerReference{
+				*metav1.NewControllerRef(app, schema.GroupVersionKind{
+					Group:   redisv1beta1.GroupVersion.Group,
+					Version: redisv1beta1.GroupVersion.Version,
+					Kind:    app.Kind,
+				}),
+			},
 		},
 		Spec: appsv1.StatefulSetSpec{
 			ServiceName: app.Name,

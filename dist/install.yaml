@@ -15553,7 +15553,7 @@ spec:
         - --leader-elect
         command:
         - /manager
-        image: rekca/redis-operator:0.1.0
+        image: controller:latest
         livenessProbe:
           httpGet:
             path: /healthz
