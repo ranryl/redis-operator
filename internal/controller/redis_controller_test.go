@@ -18,9 +18,11 @@ package controller
 
 import (
 	"context"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -31,14 +33,20 @@ import (
 )
 
 var _ = Describe("Redis Controller", func() {
+	const (
+		timeout   = time.Second * 10
+		duration  = time.Second * 10
+		interval  = time.Millisecond * 250
+		namespace = "default"
+	)
 	Context("When reconciling a resource", func() {
-		const resourceName = "test-resource"
+		const resourceName = "redis-sample"
 
 		ctx := context.Background()
 
 		typeNamespacedName := types.NamespacedName{
 			Name:      resourceName,
-			Namespace: "default", // TODO(user):Modify as needed
+			Namespace: namespace, // TODO(user):Modify as needed
 		}
 		redis := &redisv1beta1.Redis{}
 
@@ -47,13 +55,28 @@ var _ = Describe("Redis Controller", func() {
 			err := k8sClient.Get(ctx, typeNamespacedName, redis)
 			if err != nil && errors.IsNotFound(err) {
 				resource := &redisv1beta1.Redis{
+					TypeMeta: metav1.TypeMeta{
+						APIVersion: "redis.ranryl.io/v1beta1",
+						Kind:       "Redis",
+					},
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      resourceName,
-						Namespace: "default",
+						Namespace: namespace,
 					},
 					// TODO(user): Specify other spec details if needed.
+					Spec: redisv1beta1.RedisSpec{
+						Image: "redis:7.2.4",
+						Port:  6379,
+					},
 				}
 				Expect(k8sClient.Create(ctx, resource)).To(Succeed())
+				Eventually(func() bool {
+					err := k8sClient.Get(ctx, typeNamespacedName, redis)
+					return err == nil
+				}, timeout, interval).Should(BeTrue())
+				Expect(redis.Spec.Image).Should(Equal("redis:7.2.4"))
+				Expect(redis.Spec.Port).Should(Equal(int32(6379)))
+				By("By creating a new statefulset")
 			}
 		})
 
@@ -68,6 +91,12 @@ var _ = Describe("Redis Controller", func() {
 		})
 		It("should successfully reconcile the resource", func() {
 			By("Reconciling the created resource")
+			found := &redisv1beta1.Redis{}
+			Eventually(func() error {
+
+				return k8sClient.Get(ctx, typeNamespacedName, found)
+			}, time.Minute, time.Second).Should(Succeed())
+
 			controllerReconciler := &RedisReconciler{
 				Client: k8sClient,
 				Scheme: k8sClient.Scheme(),
@@ -77,8 +106,10 @@ var _ = Describe("Redis Controller", func() {
 				NamespacedName: typeNamespacedName,
 			})
 			Expect(err).NotTo(HaveOccurred())
-			// TODO(user): Add more specific assertions depending on your controller's reconciliation logic.
-			// Example: If you expect a certain status condition after reconciliation, verify it here.
+			Eventually(func() error {
+				found := &appsv1.StatefulSet{}
+				return k8sClient.Get(ctx, typeNamespacedName, found)
+			}, time.Minute, time.Second).Should(Succeed())
 		})
 	})
 })

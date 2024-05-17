@@ -32,7 +32,7 @@ import (
 
 var _ = Describe("RedisReplication Controller", func() {
 	Context("When reconciling a resource", func() {
-		const resourceName = "test-resource"
+		const resourceName = "redisreplication-sample"
 
 		ctx := context.Background()
 
@@ -47,11 +47,20 @@ var _ = Describe("RedisReplication Controller", func() {
 			err := k8sClient.Get(ctx, typeNamespacedName, redisreplication)
 			if err != nil && errors.IsNotFound(err) {
 				resource := &redisv1beta1.RedisReplication{
+					TypeMeta: metav1.TypeMeta{
+						APIVersion: "redis.ranryl.io/v1beta1",
+						Kind:       "RedisReplication",
+					},
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      resourceName,
 						Namespace: "default",
 					},
-					// TODO(user): Specify other spec details if needed.
+					Spec: redisv1beta1.RedisReplicationSpec{
+						Image:         "redis:7.2.4",
+						Port:          6379,
+						MasterReplica: 1,
+						SlaveReplica:  2,
+					},
 				}
 				Expect(k8sClient.Create(ctx, resource)).To(Succeed())
 			}

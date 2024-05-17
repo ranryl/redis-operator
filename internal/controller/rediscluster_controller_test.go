@@ -18,6 +18,7 @@ package controller
 
 import (
 	"context"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -32,7 +33,7 @@ import (
 
 var _ = Describe("RedisCluster Controller", func() {
 	Context("When reconciling a resource", func() {
-		const resourceName = "test-resource"
+		const resourceName = "rediscluster-sample"
 
 		ctx := context.Background()
 
@@ -47,14 +48,32 @@ var _ = Describe("RedisCluster Controller", func() {
 			err := k8sClient.Get(ctx, typeNamespacedName, rediscluster)
 			if err != nil && errors.IsNotFound(err) {
 				resource := &redisv1beta1.RedisCluster{
+					TypeMeta: metav1.TypeMeta{
+						APIVersion: "redis.ranryl.io/v1beta1",
+						Kind:       "RedisCluster",
+					},
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      resourceName,
 						Namespace: "default",
 					},
-					// TODO(user): Specify other spec details if needed.
+					Spec: redisv1beta1.RedisClusterSpec{
+						Image:    "redis:7.2.4",
+						Port:     6379,
+						Replicas: 3,
+						Shard:    1,
+					},
 				}
 				Expect(k8sClient.Create(ctx, resource)).To(Succeed())
+				Eventually(func() bool {
+					err := k8sClient.Get(ctx, typeNamespacedName, rediscluster)
+					return err == nil
+				}, time.Second*10, time.Second*1).Should(BeTrue())
 			}
+			Expect(rediscluster.Spec.Image).Should(Equal("redis:7.2.4"))
+			Expect(rediscluster.Spec.Port).Should(Equal(int32(6379)))
+			Expect(rediscluster.Spec.Replicas).Should(Equal(int32(3)))
+			Expect(rediscluster.Spec.Shard).Should(Equal(int32(1)))
+
 		})
 
 		AfterEach(func() {

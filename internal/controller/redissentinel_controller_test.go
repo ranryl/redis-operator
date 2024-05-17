@@ -32,7 +32,7 @@ import (
 
 var _ = Describe("RedisSentinel Controller", func() {
 	Context("When reconciling a resource", func() {
-		const resourceName = "test-resource"
+		const resourceName = "redissentinel-sample"
 
 		ctx := context.Background()
 
@@ -47,11 +47,47 @@ var _ = Describe("RedisSentinel Controller", func() {
 			err := k8sClient.Get(ctx, typeNamespacedName, redissentinel)
 			if err != nil && errors.IsNotFound(err) {
 				resource := &redisv1beta1.RedisSentinel{
+					TypeMeta: metav1.TypeMeta{
+						APIVersion: "redis.ranryl.io/v1beta1",
+						Kind:       "RedisSentinel",
+					},
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      resourceName,
 						Namespace: "default",
 					},
-					// TODO(user): Specify other spec details if needed.
+					Spec: redisv1beta1.RedisSentinelSpec{
+						Image:           "redis:7.2.4",
+						Port:            6379,
+						MasterReplica:   1,
+						SlaveReplica:    2,
+						SentinelReplica: 3,
+						SlaveConfig: `
+    bind * -::*
+    protected-mode no
+    port 6379
+    tcp-backlog 511
+    timeout 0
+    tcp-keepalive 300
+    daemonize no
+    pidfile /var/run/redis_6379.pid
+    #replicaof 127.0.0.1 6379
+`,
+						SentinelConfig: `
+    port 26379
+    daemonize no
+    pidfile /var/run/redis-sentinel.pid
+    logfile ""
+    dir /tmp
+    #sentinel monitor mymaster 127.0.0.1 6379 2
+    sentinel down-after-milliseconds mymaster 30000
+    acllog-max-len 128
+    sentinel parallel-syncs mymaster 1
+    sentinel failover-timeout mymaster 180000
+    sentinel deny-scripts-reconfig yes
+    SENTINEL resolve-hostnames yes
+    SENTINEL announce-hostnames yes
+`,
+					},
 				}
 				Expect(k8sClient.Create(ctx, resource)).To(Succeed())
 			}

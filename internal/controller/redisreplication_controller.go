@@ -29,7 +29,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -204,7 +203,7 @@ func (r *RedisReplicationReconciler) NewMasterConfig(name string, app *redisv1be
 	}
 	data := make(map[string]string)
 	data["redis.conf"] = app.Spec.RedisConfig
-	return &corev1.ConfigMap{
+	cm := &corev1.ConfigMap{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "apps/v1",
 			Kind:       "ConfigMap",
@@ -214,21 +213,21 @@ func (r *RedisReplicationReconciler) NewMasterConfig(name string, app *redisv1be
 			Namespace:   app.Namespace,
 			Labels:      app.Labels,
 			Annotations: app.Annotations,
-			OwnerReferences: []metav1.OwnerReference{
-				*metav1.NewControllerRef(app, schema.GroupVersionKind{
-					Group:   redisv1beta1.GroupVersion.Group,
-					Version: redisv1beta1.GroupVersion.Version,
-					Kind:    app.Kind,
-				}),
-			},
 		},
 		Data: data,
 	}
+	if err := ctrl.SetControllerReference(app, cm, r.Scheme); err != nil {
+		log.Log.Error(err, "set controlelr reference err")
+	}
+	return cm
 }
 func (r *RedisReplicationReconciler) NewMasterService(name string, app *redisv1beta1.RedisReplication) *corev1.Service {
 	labels := app.Labels
+	if labels == nil {
+		labels = make(map[string]string)
+	}
 	labels["app"] = "master"
-	return &corev1.Service{
+	svc := &corev1.Service{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "apps/v1",
 			Kind:       "Serivce",
@@ -238,13 +237,6 @@ func (r *RedisReplicationReconciler) NewMasterService(name string, app *redisv1b
 			Namespace:   app.Namespace,
 			Labels:      labels,
 			Annotations: app.Annotations,
-			OwnerReferences: []metav1.OwnerReference{
-				*metav1.NewControllerRef(app, schema.GroupVersionKind{
-					Group:   redisv1beta1.GroupVersion.Group,
-					Version: redisv1beta1.GroupVersion.Version,
-					Kind:    app.Kind,
-				}),
-			},
 		},
 		Spec: corev1.ServiceSpec{
 			Ports: []corev1.ServicePort{
@@ -258,6 +250,10 @@ func (r *RedisReplicationReconciler) NewMasterService(name string, app *redisv1b
 			ClusterIP: "None",
 		},
 	}
+	if err := ctrl.SetControllerReference(app, svc, r.Scheme); err != nil {
+		log.Log.Error(err, "set controlelr reference err")
+	}
+	return svc
 }
 func (r *RedisReplicationReconciler) NewSlave(name string, app *redisv1beta1.RedisReplication) *appsv1.StatefulSet {
 	sts := r.NewStatefulSet("slave", name, app)
@@ -291,7 +287,7 @@ func (r *RedisReplicationReconciler) NewSlaveConfig(appName string, app *redisv1
 	data := make(map[string]string)
 	app.Spec.SlaveConfig += "\nreplicaof " + masterPodName + " " + strconv.Itoa(int(app.Spec.Port))
 	data["redis.conf"] = app.Spec.SlaveConfig
-	return &corev1.ConfigMap{
+	cm := &corev1.ConfigMap{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "apps/v1",
 			Kind:       "ConfigMap",
@@ -301,19 +297,19 @@ func (r *RedisReplicationReconciler) NewSlaveConfig(appName string, app *redisv1
 			Namespace:   app.Namespace,
 			Labels:      app.Labels,
 			Annotations: app.Annotations,
-			OwnerReferences: []metav1.OwnerReference{
-				*metav1.NewControllerRef(app, schema.GroupVersionKind{
-					Group:   redisv1beta1.GroupVersion.Group,
-					Version: redisv1beta1.GroupVersion.Version,
-					Kind:    app.Kind,
-				}),
-			},
 		},
 		Data: data,
 	}
+	if err := ctrl.SetControllerReference(app, cm, r.Scheme); err != nil {
+		log.Log.Error(err, "set controlelr reference err")
+	}
+	return cm
 }
 func (r *RedisReplicationReconciler) NewStatefulSet(labelAppName, name string, app *redisv1beta1.RedisReplication) *appsv1.StatefulSet {
 	labels := app.Labels
+	if labels == nil {
+		labels = make(map[string]string)
+	}
 	labels["app"] = labelAppName
 	selector := &metav1.LabelSelector{MatchLabels: labels}
 	sts := &appsv1.StatefulSet{
@@ -326,13 +322,6 @@ func (r *RedisReplicationReconciler) NewStatefulSet(labelAppName, name string, a
 			Namespace:   app.Namespace,
 			Annotations: app.Annotations,
 			Labels:      app.Labels,
-			OwnerReferences: []metav1.OwnerReference{
-				*metav1.NewControllerRef(app, schema.GroupVersionKind{
-					Group:   redisv1beta1.GroupVersion.Group,
-					Version: redisv1beta1.GroupVersion.Version,
-					Kind:    app.Kind,
-				}),
-			},
 		},
 		Spec: appsv1.StatefulSetSpec{
 			ServiceName: name,
@@ -391,6 +380,9 @@ func (r *RedisReplicationReconciler) NewStatefulSet(labelAppName, name string, a
 				EmptyDir: &corev1.EmptyDirVolumeSource{},
 			},
 		})
+	}
+	if err := ctrl.SetControllerReference(app, sts, r.Scheme); err != nil {
+		log.Log.Error(err, "set controlelr reference err")
 	}
 	return sts
 }
